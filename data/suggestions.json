@@ -1,0 +1,57 @@
+{
+  "Name": [
+    "John Doe",
+    "Jane Smith",
+    "Michael Johnson",
+    "Emily Brown",
+    "David Wilson",
+    "Sarah Davis",
+    "Robert Miller",
+    "Lisa Anderson",
+    "James Taylor",
+    "Mary Thomas"
+  ],
+  "Age": [
+    "18", "20", "22", "25", "28", "30", "32", "35", "40", "45"
+  ],
+  "Height": [
+    "150", "155", "160", "165", "170", "175", "180", "185", "190"
+  ],
+  "Weight": [
+    "45", "50", "55", "60", "65", "70", "75", "80", "85", "90"
+  ],
+  "Chest": [
+    "80", "85", "90", "95", "100", "105", "110"
+  ],
+  "Hip": [
+    "85", "90", "95", "100", "105", "110", "115"
+  ],
+  "Size": [
+    "XS", "S", "M", "L", "XL", "XXL"
+  ],
+  "Gender": [
+    "Male", "Female", "Other"
+  ],
+  "Status": [
+    "Active", "Inactive", "Pending", "Completed"
+  ],
+  "Department": [
+    "Engineering", "Marketing", "Sales", "HR", "Finance", "Operations"
+  ],
+  "City": [
+    "Mumbai", "Delhi", "Bangalore", "Kottayam", "Chennai", "Kolkata", "Pune", "Hyderabad"
+  ],
+  "Country": [
+    "India", "USA", "UK", "Canada", "Australia", "Germany", "France", "Japan"
+  ],
+  "Email": [
+    "user@example.com",
+    "contact@company.com",
+    "info@domain.com"
+  ],
+  "Phone": [
+    "+91 9876543210",
+    "+91 8765432109",
+    "+1 555-0123"
+  ]
+}
