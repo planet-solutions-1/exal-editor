@@ -1,14 +1,235 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Excel Editor Pro - Professional Data Management</title>
-  <meta name="description" content="Professional Excel editing and data management system">
-  <link rel="icon" type="image/svg+xml" href="/vite.svg">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Planet Solutions - Excel Generator</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+
+        .glass {
+            background: rgba(255, 255, 255, 0.7);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+        }
+    </style>
 </head>
-<body>
-  <div id="root"></div>
-  <script type="module" src="/src/main.jsx"></script>
+
+<body class="bg-gradient-to-br from-slate-100 to-slate-200 min-h-screen flex items-center justify-center p-4">
+
+    <div class="glass bg-white rounded-2xl shadow-xl w-full max-w-md p-8 relative overflow-hidden">
+        <div class="absolute top-0 left-0 w-full h-2 bg-gradient-to-r from-blue-500 to-purple-600"></div>
+
+        <div class="mb-8 text-center">
+            <h1 class="text-3xl font-bold text-slate-800 mb-2">Excel Generator</h1>
+            <p class="text-slate-500">Planet Solutions Measurement System</p>
+        </div>
+
+        <div class="space-y-6">
+            <div>
+                <label for="rowCount" class="block text-sm font-medium text-slate-700 mb-2">Number of Rows</label>
+                <div class="relative">
+                    <input type="number" id="rowCount" value="200" min="1" max="10000"
+                        class="block w-full px-4 py-3 rounded-lg border-gray-300 bg-slate-50 focus:bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all outline-none border shadow-sm"
+                        placeholder="Enter number of rows">
+                </div>
+                <p class="text-xs text-slate-400 mt-2">Default is 200 rows.</p>
+            </div>
+
+            <button onclick="generateExcel()"
+                class="w-full bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white font-semibold py-3 px-6 rounded-lg shadow-lg transform transition hover:-translate-y-0.5 active:translate-y-0 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
+                Generate & Download Excel
+            </button>
+        </div>
+
+        <div id="status" class="mt-6 text-center text-sm hidden">
+            <span class="inline-flex items-center px-3 py-1 rounded-full bg-green-100 text-green-800">
+                <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                </svg>
+                File Generated Successfully!
+            </span>
+        </div>
+
+        <div class="mt-8 pt-6 border-t border-slate-100 text-center text-xs text-slate-400">
+            &copy; 2025 Planet Solutions
+        </div>
+    </div>
+
+    <script>
+        function generateExcel() {
+            const rowCount = parseInt(document.getElementById('rowCount').value) || 200;
+            const statusEl = document.getElementById('status');
+
+            // Define Headers
+            const infoHeaders = ["S.No", "Admission No", "Student Name", "Class", "Section", "Gender", "Absent/Present"];
+            const measureHeaders = [
+                "U1 (SHIRT LENGTH)", "U2 (CHEST)", "U3 (STOMACH)", "U4 (SHOULDER)",
+                "U5 (FULL SLEEVE)", "U6 (HALF SLEEVE)", "U7 (KURTHA/SPECIAL FROCK LENGTH)", "U8 (EXTRA CELL)",
+                "L1 (PANT LENGTH)", "L2 (WAIST)", "L3 (SHORTS LENGTH)", "L4 (PINOFORE LENGTH)",
+                "L5 (SKIRT LENGTH)", "L6 (HIP)", "L7 (THIGH)", "L8 (EXTRA CELL)"
+            ];
+
+            // Item Definitions with Type
+            const boysItems = [
+                { name: "BOYS - FORMAL SHIRT", cols: ["U1", "U2", "U3", "U4", "U6"], type: "Male" },
+                { name: "BOYS - TRACK T-SHIRT", cols: ["U1", "U2", "U3", "U4", "U6"], type: "Male" },
+                { name: "BOYS - UNIFORM T-SHIRT", cols: ["U1", "U2", "U3", "U4", "U6"], type: "Male" },
+                { name: "BOYS - JERKIN", cols: ["U1", "U2", "U3", "U4", "U5"], type: "Male" },
+                { name: "BOYS - PULLOVER", cols: ["U1", "U2", "U3", "U4", "U5"], type: "Male" },
+                { name: "BOYS - FORMAL PANT", cols: ["L1", "L2"], type: "Male" },
+                { name: "BOYS - TRACK PANT", cols: ["L1", "L2"], type: "Male" },
+                { name: "BOYS - FORMAL SHORTS", cols: ["L3", "L2"], type: "Male" },
+                { name: "BOYS - TRACK SHORTS", cols: ["L3", "L2"], type: "Male" },
+                { name: "BOYS - PANT SPECIAL CASE", cols: ["L1", "L2", "L6", "L7"], type: "Male" },
+            ];
+
+            const girlsItems = [
+                { name: "GIRLS - FORMAL SHIRT", cols: ["U1", "U2", "U3", "U4", "U6"], type: "Female" },
+                { name: "GIRLS - TRACK T-SHIRT", cols: ["U1", "U2", "U3", "U4", "U6"], type: "Female" },
+                { name: "GIRLS - UNIFORM T-SHIRT", cols: ["U1", "U2", "U3", "U4", "U6"], type: "Female" },
+                { name: "GIRLS - JERKIN", cols: ["U1", "U2", "U3", "U4", "U5"], type: "Female" },
+                { name: "GIRLS - FULL SLEEVE SHIRT", cols: ["U1", "U2", "U3", "U4", "U5"], type: "Female" },
+                { name: "GIRLS - PULLOVER", cols: ["U1", "U2", "U3", "U4", "U5"], type: "Female" },
+                { name: "GIRLS - KURTHA SHIRT", cols: ["U7", "U2", "U3", "U4", "U6"], type: "Female" },
+                { name: "GIRLS - SPECIAL FROCKS", cols: ["U7", "U2", "U3", "U4", "U6"], type: "Female" },
+                { name: "GIRLS - FORMAL PANT", cols: ["L1", "L2"], type: "Female" },
+                { name: "GIRLS - TRACK PANT", cols: ["L1", "L2"], type: "Female" },
+                { name: "GIRLS - TRACK SHORTS", cols: ["L3", "L2"], type: "Female" },
+                { name: "GIRLS - PINOFORE", cols: ["L4", "L2"], type: "Female" },
+                { name: "GIRLS - SKIRT", cols: ["L5", "L2"], type: "Female" },
+                { name: "GIRLS - PANT SPECIAL CASE", cols: ["L1", "L2", "L6", "L7"], type: "Female" },
+            ];
+
+            const allItems = [...boysItems, ...girlsItems];
+            const itemHeaders = allItems.map(i => i.name);
+
+            // Combine all headers
+            const headers = [...infoHeaders, ...measureHeaders, ...itemHeaders];
+
+            // Create Data Array
+            const data = [headers];
+
+            // Helper to get column letter (0-based index to A, B, C...)
+            function getColLetter(colIndex) {
+                let temp, letter = '';
+                while (colIndex >= 0) {
+                    temp = (colIndex) % 26;
+                    letter = String.fromCharCode(temp + 65) + letter;
+                    colIndex = (colIndex - temp - 1) / 26;
+                    if (colIndex < 0) break;
+                    colIndex--; // adjust for 0-based
+                }
+                return letter;
+            }
+
+            const startMeasureCol = infoHeaders.length;
+
+            const uMap = {};
+            for (let i = 1; i <= 8; i++) uMap[`U${i}`] = startMeasureCol + i - 1;
+
+            const lMap = {};
+            for (let i = 1; i <= 8; i++) lMap[`L${i}`] = startMeasureCol + 8 + i - 1;
+
+            const startItemCol = headers.length - allItems.length;
+
+            // Generate Rows
+            for (let i = 0; i < rowCount; i++) {
+                const row = new Array(headers.length).fill("");
+                const rowNum = i + 2; // Excel row number (1-based, +1 for header)
+
+                // Fill default "00" for measurements
+                for (let c = startMeasureCol; c < startMeasureCol + 16; c++) {
+                    row[c] = "00";
+                }
+
+                data.push(row);
+            }
+
+            // Create Workbook
+            const wb = XLSX.utils.book_new();
+            const ws = XLSX.utils.aoa_to_sheet(data);
+
+            // Add Formulas
+            for (let r = 0; r < rowCount; r++) {
+                const rowNum = r + 2;
+                const genderCell = `F${rowNum}`; // Gender is in Column F (Index 5)
+
+                allItems.forEach((item, idx) => {
+                    const colIndex = startItemCol + idx;
+                    const cellRef = XLSX.utils.encode_cell({ r: rowNum - 1, c: colIndex }); // 0-based row/col
+
+                    const parts = item.cols.map(comp => {
+                        let colIdx = -1;
+                        if (uMap[comp] !== undefined) colIdx = uMap[comp];
+                        else if (lMap[comp] !== undefined) colIdx = lMap[comp];
+
+                        if (colIdx !== -1) {
+                            const colLetter = XLSX.utils.encode_col(colIdx);
+                            return `${colLetter}${rowNum}`;
+                        }
+                        return null;
+                    }).filter(p => p);
+
+                    // Base Formula: =H2 & "," & I2 ...
+                    const concatFormula = parts.join(' & "," & ');
+
+                    // Conditional Formula
+                    let finalFormula = "";
+                    if (item.type === "Male") {
+                        finalFormula = `IF(UPPER(${genderCell})="MALE", ${concatFormula}, "")`;
+                    } else if (item.type === "Female") {
+                        finalFormula = `IF(UPPER(${genderCell})="FEMALE", ${concatFormula}, "")`;
+                    } else {
+                        finalFormula = concatFormula;
+                    }
+
+                    // Set cell formula
+                    if (!ws[cellRef]) ws[cellRef] = { t: 's', v: '' };
+                    ws[cellRef].f = finalFormula;
+                });
+            }
+
+            // Auto-width (approximate)
+            const wscols = headers.map(h => ({ wch: h.length + 5 }));
+            ws['!cols'] = wscols;
+
+            XLSX.utils.book_append_sheet(wb, ws, "Measurements");
+
+            // Manual Download Logic
+            const wbout = XLSX.write(wb, { bookType: 'xlsx', type: 'binary' });
+
+            function s2ab(s) {
+                const buf = new ArrayBuffer(s.length);
+                const view = new Uint8Array(buf);
+                for (let i = 0; i < s.length; i++) view[i] = s.charCodeAt(i) & 0xFF;
+                return buf;
+            }
+
+            const blob = new Blob([s2ab(wbout)], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement("a");
+            a.href = url;
+            a.download = "PLANETFINAL.xlsx";
+            document.body.appendChild(a);
+            a.click();
+            setTimeout(() => {
+                document.body.removeChild(a);
+                window.URL.revokeObjectURL(url);
+            }, 0);
+
+            // Show status
+            statusEl.classList.remove('hidden');
+            setTimeout(() => statusEl.classList.add('hidden'), 5000);
+        }
+    </script>
 </body>
+
 </html>
