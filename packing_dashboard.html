@@ -1,0 +1,695 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Packing Dashboard - Planet Solutions</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.17.0/xlsx.full.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+    <script>
+        // Shim for jspdf
+        window.jsPDF = window.jspdf.jsPDF;
+    </script>
+    <style>
+        /* Classic Planet Editor Design System */
+        :root {
+            --color-gunmetal: #2C3E50;
+            --color-bg: #F5F7FA;
+            --color-border: #E2E8F0;
+            --color-text: #4A5568;
+            --color-success: #10B981;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: var(--color-bg);
+            color: var(--color-text);
+        }
+
+        /* Header - Matches Planet Editor */
+        header {
+            background: white;
+            border-bottom: 1px solid var(--color-border);
+            box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+        }
+
+        /* Card - Clean & Sharp */
+        .card {
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+            border: 1px solid var(--color-border);
+        }
+
+        /* Table Aesthetics - Professional & Dense */
+        th {
+            background-color: #F8FAFC;
+            color: #64748B;
+            font-weight: 600;
+            text-transform: uppercase;
+            font-size: 0.75rem;
+            letter-spacing: 0.05em;
+            padding: 0.75rem 1rem;
+            border-bottom: 1px solid var(--color-border);
+        }
+
+        td {
+            padding: 0.75rem 1rem;
+            border-bottom: 1px solid #F1F5F9;
+        }
+
+        tr {
+            transition: all 0.2s ease;
+        }
+
+        tr:hover {
+            background-color: #F8FAFC;
+        }
+
+        /* Minute Art: Checkbox */
+        .pack-checkbox {
+            appearance: none;
+            width: 18px;
+            height: 18px;
+            border: 2px solid #CBD5E0;
+            border-radius: 4px;
+            /* Slightly rounded squares */
+            cursor: pointer;
+            position: relative;
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .pack-checkbox:checked {
+            background-color: var(--color-success);
+            border-color: var(--color-success);
+            transform: scale(1.1);
+            /* Micro-interaction */
+        }
+
+        .pack-checkbox:checked::after {
+            content: '';
+            position: absolute;
+            left: 5px;
+            top: 1px;
+            width: 5px;
+            height: 10px;
+            border: solid white;
+            border-width: 0 2px 2px 0;
+            transform: rotate(45deg);
+        }
+
+        /* Minute Art: Packed Row State */
+        tr.packed-row {
+            background-color: #F0FFF4;
+            /* Very subtle mint */
+            opacity: 0.8;
+        }
+
+        tr.packed-row td {
+            color: #94A3B8;
+            /* Muted text */
+            text-decoration: line-through;
+            /* Strikethrough */
+            text-decoration-color: #CBD5E0;
+        }
+
+        tr.packed-row td:first-child {
+            /* Keep checkbox clear */
+            text-decoration: none;
+            opacity: 1;
+        }
+
+        /* Minute Art: Stats Pills */
+        .stat-pill {
+            transition: transform 0.2s;
+        }
+
+        .stat-pill:hover {
+            transform: translateY(-1px);
+            /* Little lift */
+        }
+
+        /* Custom Scrollbar for Dashboard feel */
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: #F1F5F9;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: #CBD5E0;
+            border-radius: 4px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: #94A3B8;
+        }
+
+        /* Header Icon Box */
+        .icon-box {
+            background: #4A5568;
+            color: white;
+            padding: 0.5rem;
+            border-radius: 0.375rem;
+            /* rounded-md */
+            box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+        }
+    </style>
+</head>
+
+<body class="min-h-screen flex flex-col overflow-hidden">
+
+    <!-- Header -->
+    <header class="px-6 py-4 flex justify-between items-center z-30 relative">
+        <div class="flex items-center gap-4">
+            <div class="icon-box">
+                <!-- Box Icon -->
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path
+                        d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z">
+                    </path>
+                    <polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline>
+                    <line x1="12" y1="22.08" x2="12" y2="12"></line>
+                </svg>
+            </div>
+            <div>
+                <h1 class="font-bold text-[#2C3E50] text-xl leading-tight tracking-tight">Packing Dashboard</h1>
+                <p class="text-xs text-[#7F8C8D] font-light tracking-wide uppercase">Rapid Data Logistics</p>
+            </div>
+        </div>
+
+        <div class="flex gap-4 items-center">
+            <!-- Stats -->
+            <div id="statsContainer" class="hidden flex gap-3 text-xs font-semibold mr-2">
+                <div class="stat-pill px-3 py-1 bg-gray-50 text-gray-600 rounded-md border border-gray-200">
+                    TOTAL <span id="statTotal" class="ml-1 text-gray-800">0</span>
+                </div>
+                <div class="stat-pill px-3 py-1 bg-green-50 text-green-700 rounded-md border border-green-200">
+                    PACKED <span id="statPacked" class="ml-1 font-bold">0</span>
+                </div>
+                <div class="stat-pill px-3 py-1 bg-orange-50 text-orange-700 rounded-md border border-orange-200">
+                    PENDING <span id="statPending" class="ml-1 font-bold">0</span>
+                </div>
+            </div>
+
+            <!-- PDF Report Button (Initially Hidden) -->
+            <button id="btnReport" onclick="generatePDF()"
+                class="hidden btn-secondary bg-white text-gray-600 border border-gray-300 hover:bg-gray-50 px-4 py-2 rounded-md shadow-sm transition-all flex items-center gap-2 text-sm font-medium">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                    <polyline points="14 2 14 8 20 8"></polyline>
+                    <line x1="16" y1="13" x2="8" y2="13"></line>
+                    <line x1="16" y1="17" x2="8" y2="17"></line>
+                    <polyline points="10 9 9 9 8 9"></polyline>
+                </svg>
+                PDF Report
+            </button>
+
+            <label
+                class="bg-[#2C3E50] hover:bg-[#1A252F] text-white px-4 py-2 rounded-md shadow-sm cursor-pointer transition-all flex items-center gap-2 text-sm font-medium">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                    <polyline points="17 8 12 3 7 8"></polyline>
+                    <line x1="12" y1="3" x2="12" y2="15"></line>
+                </svg>
+                Upload Excel
+                <input type="file" id="fileUpload" class="hidden" accept=".xlsx,.xls"
+                    onchange="handleFileUpload(event)">
+            </label>
+
+            <a href="planet_editor.html"
+                class="text-gray-400 hover:text-[#2C3E50] transition-colors p-2 rounded-full hover:bg-gray-100"
+                title="Back to Editor">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M11 17l-5-5 5-5M18 17l-5-5 5-5" />
+                </svg>
+            </a>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="flex-1 p-6 overflow-hidden flex flex-col gap-4 max-w-[1600px] w-full mx-auto">
+
+        <!-- Filters (Hidden until data loaded) -->
+        <div id="filterBar" class="hidden card p-3 flex flex-wrap gap-3 items-center bg-white shadow-sm">
+            <div class="px-2 text-gray-400">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <circle cx="11" cy="11" r="8"></circle>
+                    <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+                </svg>
+            </div>
+
+            <select id="filterClass"
+                class="bg-gray-50 border border-gray-200 text-sm rounded px-3 py-1.5 focus:border-blue-500 focus:bg-white outline-none cursor-pointer text-gray-700"
+                onchange="applyFilters()">
+                <option value="">All Classes</option>
+            </select>
+
+            <select id="filterSection"
+                class="bg-gray-50 border border-gray-200 text-sm rounded px-3 py-1.5 focus:border-blue-500 focus:bg-white outline-none cursor-pointer text-gray-700"
+                onchange="applyFilters()">
+                <option value="">All Sections</option>
+            </select>
+
+            <select id="filterHouse"
+                class="bg-gray-50 border border-gray-200 text-sm rounded px-3 py-1.5 focus:border-blue-500 focus:bg-white outline-none cursor-pointer text-gray-700"
+                onchange="applyFilters()">
+                <option value="">All Houses</option>
+            </select>
+
+            <div class="w-px h-6 bg-gray-200 mx-1"></div>
+
+            <select id="filterStatus"
+                class="bg-gray-50 border border-gray-200 text-sm rounded px-3 py-1.5 focus:border-blue-500 focus:bg-white outline-none cursor-pointer text-gray-700"
+                onchange="applyFilters()">
+                <option value="">All Status</option>
+                <option value="packed">Packed</option>
+                <option value="pending">Pending</option>
+            </select>
+
+            <div class="ml-auto w-64">
+                <input type="text" id="searchBox" placeholder="Search..."
+                    class="w-full px-3 py-1.5 bg-gray-50 border border-gray-200 rounded text-sm focus:border-blue-500 focus:bg-white outline-none"
+                    oninput="applyFilters()">
+            </div>
+        </div>
+
+        <!-- Table Container -->
+        <div id="tableContainer" class="hidden flex-1 card overflow-hidden flex flex-col bg-white">
+            <div class="overflow-auto flex-1 custom-scrollbar">
+                <table class="w-full text-left border-collapse">
+                    <thead class="sticky top-0 z-10 bg-gray-50 shadow-sm">
+                        <tr>
+                            <th class="w-16 text-center">Status</th>
+                            <th>Admission No</th>
+                            <th>Student Name</th>
+                            <th>Class</th>
+                            <th>Section</th>
+                            <th>House</th>
+                            <th>Gender</th>
+                            <th>Packing Info</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tableBody" class="text-sm text-gray-600 divide-y divide-gray-100">
+                        <!-- Rows generated by JS -->
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Empty State -->
+            <div id="emptyState" class="hidden flex flex-col items-center justify-center h-full text-gray-400 gap-2">
+                <div class="p-3 bg-gray-50 rounded-full">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <circle cx="11" cy="11" r="8"></circle>
+                        <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+                    </svg>
+                </div>
+                <p class="text-sm">No records found matching filters</p>
+            </div>
+        </div>
+
+        <!-- Initial Placeholder -->
+        <div id="welcomePlaceholder"
+            class="flex-1 flex flex-col items-center justify-center text-center text-gray-400 gap-4">
+            <div class="p-6 bg-white rounded-full shadow-sm border border-gray-100">
+                <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#CBD5E0" stroke-width="1.5">
+                    <path
+                        d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z">
+                    </path>
+                    <polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline>
+                    <line x1="12" y1="22.08" x2="12" y2="12"></line>
+                </svg>
+            </div>
+            <div>
+                <h2 class="text-xl font-semibold text-gray-700 mb-1">Upload Packing List</h2>
+                <p class="text-sm max-w-xs mx-auto">Import your Excel file to start tracking packed items. Data is
+                    auto-saved.</p>
+            </div>
+        </div>
+
+    </main>
+    <script>
+        let allData = [];
+        let filteredData = [];
+        let packedState = {};
+
+        // Persistence Key
+        const STORAGE_KEY_PREFIX = 'planet_packing_';
+        let currentFileKey = 'default';
+
+        function init() { }
+
+        async function handleFileUpload(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            currentFileKey = STORAGE_KEY_PREFIX + file.name;
+            loadPackedState();
+
+            const reader = new FileReader();
+
+            reader.onload = function (e) {
+                const data = new Uint8Array(e.target.result);
+                const workbook = XLSX.read(data, { type: 'array' });
+
+                const firstSheetName = workbook.SheetNames[0];
+                const worksheet = workbook.Sheets[firstSheetName];
+
+                const jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
+
+                let headerRowIndex = -1;
+                for (let i = 0; i < Math.min(jsonData.length, 20); i++) {
+                    const row = jsonData[i];
+                    if (row && row.includes('Admission No')) {
+                        headerRowIndex = i;
+                        break;
+                    }
+                }
+
+                if (headerRowIndex === -1) {
+                    alert("Could not find standard headers ('Admission No'). Please check file format.");
+                    return;
+                }
+
+                const headers = jsonData[headerRowIndex];
+                const rawRows = jsonData.slice(headerRowIndex + 1);
+
+                allData = rawRows.map((row, idx) => {
+                    let obj = { _originalIndex: idx };
+                    headers.forEach((h, colIdx) => {
+                        if (h) obj[h.trim()] = row[colIdx];
+                    });
+                    return obj;
+                }).filter(o => o['Admission No']);
+
+                // AUTO-SORT: Class Ascending
+                allData.sort((a, b) => {
+                    const classA = parseClass(a['Class']);
+                    const classB = parseClass(b['Class']);
+                    if (classA !== classB) return classA - classB;
+
+                    const secA = (a['Section'] || "").toString();
+                    const secB = (b['Section'] || "").toString();
+                    return secA.localeCompare(secB);
+                });
+
+                document.getElementById('welcomePlaceholder').classList.add('hidden');
+                document.getElementById('filterBar').classList.remove('hidden');
+                document.getElementById('tableContainer').classList.remove('hidden');
+                document.getElementById('statsContainer').classList.remove('hidden');
+                document.getElementById('btnReport').classList.remove('hidden');
+                document.getElementById('filterBar').classList.add('flex');
+                document.getElementById('statsContainer').classList.add('flex');
+
+                populateFilters();
+                applyFilters();
+            };
+
+            reader.readAsArrayBuffer(file);
+        }
+
+        function parseClass(cls) {
+            if (!cls) return 999;
+            const s = cls.toString().toUpperCase().trim();
+            if (!isNaN(s)) return parseInt(s);
+            if (s === 'LKG') return -2;
+            if (s === 'UKG') return -1;
+            return 999;
+        }
+
+        function loadPackedState() {
+            try {
+                const stored = localStorage.getItem(currentFileKey);
+                if (stored) {
+                    packedState = JSON.parse(stored);
+                } else {
+                    packedState = {};
+                }
+            } catch (e) {
+                console.error("Storage Error", e);
+                packedState = {};
+            }
+        }
+
+        function savePackedState() {
+            localStorage.setItem(currentFileKey, JSON.stringify(packedState));
+            updateStats();
+        }
+
+        function togglePack(admissionNo, checked) {
+            if (checked) {
+                packedState[admissionNo] = true;
+            } else {
+                delete packedState[admissionNo];
+            }
+            savePackedState();
+
+            const row = document.getElementById(`row-${admissionNo}`);
+            if (row) {
+                if (checked) row.classList.add('packed-row');
+                else row.classList.remove('packed-row');
+            }
+        }
+
+        function populateFilters() {
+            const classes = new Set(allData.map(d => d['Class']).filter(Boolean));
+            const sections = new Set(allData.map(d => d['Section']).filter(Boolean));
+            const houses = new Set(allData.map(d => d['House']).filter(Boolean));
+
+            const sortedClasses = Array.from(classes).sort((a, b) => parseClass(a) - parseClass(b));
+            const sortedSections = Array.from(sections).sort();
+            const sortedHouses = Array.from(houses).sort();
+
+            const fillSelect = (id, list) => {
+                const sel = document.getElementById(id);
+                while (sel.options.length > 1) sel.remove(1);
+                list.forEach(item => {
+                    const opt = document.createElement('option');
+                    opt.value = item;
+                    opt.textContent = item;
+                    sel.appendChild(opt);
+                });
+            };
+
+            fillSelect('filterClass', sortedClasses);
+            fillSelect('filterSection', sortedSections);
+            fillSelect('filterHouse', sortedHouses);
+        }
+
+        function applyFilters() {
+            const fClass = document.getElementById('filterClass').value;
+            const fSection = document.getElementById('filterSection').value;
+            const fHouse = document.getElementById('filterHouse').value;
+            const fStatus = document.getElementById('filterStatus').value;
+            const fSearch = document.getElementById('searchBox').value.toLowerCase();
+
+            filteredData = allData.filter(item => {
+                const adm = item['Admission No'];
+                if (fClass && item['Class'] != fClass) return false;
+                if (fSection && item['Section'] != fSection) return false;
+                if (fHouse && item['House'] != fHouse) return false;
+
+                if (fSearch) {
+                    const content = Object.values(item).join(' ').toLowerCase();
+                    if (!content.includes(fSearch)) return false;
+                }
+
+                const isPacked = !!packedState[adm];
+                if (fStatus === 'packed' && !isPacked) return false;
+                if (fStatus === 'pending' && isPacked) return false;
+
+                return true;
+            });
+
+            renderTable();
+            updateStats();
+        }
+
+        async function generatePDF() {
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
+
+            // Report Header
+            doc.setFont('helvetica', 'bold');
+            doc.setFontSize(16);
+            doc.setTextColor(44, 62, 80);
+            doc.text('Packing Report', 14, 15);
+
+            doc.setFontSize(10);
+            doc.setFont('helvetica', 'normal');
+            doc.setTextColor(100);
+            const dateStr = new Date().toLocaleString();
+            doc.text(`Generated on: ${dateStr}`, 14, 21);
+
+            // Filter Info
+            const fClass = document.getElementById('filterClass').value || 'All';
+            const fSection = document.getElementById('filterSection').value || 'All';
+            const fStatus = document.getElementById('filterStatus').value || 'All';
+
+            doc.text(`Filters: Class: ${fClass} | Section: ${fSection} | Status: ${fStatus}`, 14, 26);
+
+
+            const tableHeaders = [['Status', 'Adm No', 'Name', 'Class', 'Sec', 'House', 'Item / Pattern']];
+
+            // Standard Keys + Individual Measurement Keys to IGNORE
+            const excludedKeys = new Set([
+                'S.No', 'Admission No', 'Student Name', 'Class', 'Section', 'House', 'Gender',
+                'Pattern', 'Pattern Code', '_originalIndex', 'Absent/Present'
+            ]);
+            // Regex for U1-U8, L1-L8 style keys
+            const isMeasurementKey = (key) => /^[UL]\d/.test(key);
+
+            const tableRows = filteredData.map(item => {
+                const isPacked = !!packedState[item['Admission No']];
+
+                let info = '';
+                if (item['Pattern Code']) info += `Pattern: ${item['Pattern Code']} `;
+
+                Object.keys(item).forEach(key => {
+                    if (!excludedKeys.has(key) && !isMeasurementKey(key) && item[key]) {
+                        info += `| ${key}: ${item[key]} `;
+                    }
+                });
+
+
+                return [
+                    isPacked ? 'PACKED' : 'Pending',
+                    item['Admission No'],
+                    item['Student Name'],
+                    item['Class'],
+                    item['Section'],
+                    item['House'],
+                    info
+                ];
+            });
+
+            doc.autoTable({
+                head: tableHeaders,
+                body: tableRows,
+                startY: 32,
+                theme: 'grid',
+                headStyles: { fillColor: [44, 62, 80], textColor: 255 },
+                styles: { fontSize: 8, cellPadding: 2 },
+                columnStyles: {
+                    0: { fontStyle: 'bold', textColor: [50, 50, 50] } // Status column
+                },
+                didParseCell: function (data) {
+                    // Color code status
+                    if (data.section === 'body' && data.column.index === 0) {
+                        if (data.cell.styles && data.cell.raw === 'PACKED') {
+                            data.cell.styles.textColor = [16, 185, 129]; // Green
+                        } else if (data.cell.styles) {
+                            data.cell.styles.textColor = [234, 88, 12]; // Orange
+                        }
+                    }
+                }
+            });
+
+            doc.save(`packing_report_${new Date().toISOString().slice(0, 10)}.pdf`);
+        }
+
+        function renderTable() {
+            const tbody = document.getElementById('tableBody');
+            tbody.innerHTML = '';
+
+            const emptyState = document.getElementById('emptyState');
+            if (filteredData.length === 0) {
+                emptyState.classList.remove('hidden');
+                return;
+            } else {
+                emptyState.classList.add('hidden');
+            }
+
+            // Standard Keys + Individual Measurement Keys to IGNORE
+            const excludedKeys = new Set([
+                'S.No', 'Admission No', 'Student Name', 'Class', 'Section', 'House', 'Gender',
+                'Pattern', 'Pattern Code', '_originalIndex', 'Absent/Present'
+            ]);
+
+            // Regex for U1-U8, L1-L8 style keys (and those with descriptions like "U1 (Length)")
+            const isMeasurementKey = (key) => /^[UL]\d/.test(key);
+
+            filteredData.forEach(item => {
+                const adm = item['Admission No'];
+                const isPacked = !!packedState[adm];
+
+                const tr = document.createElement('tr');
+                tr.id = `row-${adm}`;
+                tr.className = `border-b border-gray-100 transition-colors ${isPacked ? 'packed-row' : ''}`;
+
+                // Smart Item Detection
+                let mainItemHTML = '';
+                let patternHTML = '';
+
+                if (item['Pattern Code']) {
+                    patternHTML = `<div class="text-xs text-gray-500 mb-1">Pattern: <span class="font-bold text-gray-700">${item['Pattern Code']}</span></div>`;
+                }
+
+                // Find "The Item Column" (e.g., "BOYS - SHIRT")
+                Object.keys(item).forEach(key => {
+                    if (!excludedKeys.has(key) && !isMeasurementKey(key)) {
+                        // This is likely our Item Name
+                        const val = item[key];
+                        if (val) {
+                            mainItemHTML += `
+                                <div class="mb-1.5">
+                                    <div class="text-[11px] font-bold text-blue-600 uppercase tracking-wide bg-blue-50 w-fit px-1.5 py-0.5 rounded border border-blue-100">
+                                        ${key}
+                                    </div>
+                                    <div class="text-xs font-mono text-gray-800 mt-0.5 ml-0.5">${val}</div>
+                                </div>
+                            `;
+                        }
+                    }
+                });
+
+                // If no specific item column found, fallback to just pattern
+                if (!mainItemHTML && patternHTML) {
+                    mainItemHTML = patternHTML;
+                    patternHTML = ''; // Don't dup
+                }
+
+
+                tr.innerHTML = `
+                    <td class="p-3 text-center">
+                        <input type="checkbox" class="pack-checkbox" 
+                            ${isPacked ? 'checked' : ''} 
+                            onchange="togglePack('${adm}', this.checked)">
+                    </td>
+                    <td class="p-3 font-medium text-gray-700">${adm}</td>
+                    <td class="p-3 font-medium text-gray-900">${item['Student Name'] || '-'}</td>
+                    <td class="p-3"><span class="bg-gray-100 text-gray-700 px-2 py-0.5 rounded text-xs font-bold border border-gray-200">${item['Class'] || '-'}</span></td>
+                    <td class="p-3 text-gray-600">${item['Section'] || '-'}</td>
+                    <td class="p-3 text-gray-500 text-xs font-semibold uppercase">${item['House'] || '-'}</td>
+                    <td class="p-3 text-gray-500 text-xs">${item['Gender'] || '-'}</td>
+                    <td class="p-3 align-top">
+                        ${mainItemHTML}
+                        ${patternHTML}
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        function updateStats() {
+            const total = allData.length;
+            const packed = Object.keys(packedState).filter(k => allData.find(d => d['Admission No'] == k)).length;
+            const pending = total - packed;
+
+            document.getElementById('statTotal').textContent = total;
+            document.getElementById('statPacked').textContent = packed;
+            document.getElementById('statPending').textContent = pending;
+        }
+
+        window.onload = init;
+    </script>
+</body>
+
+</html>
