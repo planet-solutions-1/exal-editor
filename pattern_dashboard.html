@@ -125,7 +125,8 @@
     <!-- Create Pattern Modal -->
     <div id="patternModal"
         class="fixed inset-0 bg-black/50 z-50 hidden flex items-center justify-center backdrop-blur-sm p-4">
-        <div class="bg-white rounded-lg shadow-xl w-full max-w-md flex flex-col overflow-hidden">
+        <div
+            class="bg-white rounded-lg shadow-xl w-[95%] sm:w-full max-w-md flex flex-col overflow-hidden animate-in fade-in zoom-in duration-200">
             <div class="px-6 py-4 border-b border-[#E2E8F0] bg-[#F9F9F7]">
                 <h3 class="font-bold text-[#2C3E50] text-lg">Create Pattern Group</h3>
             </div>
@@ -154,7 +155,8 @@
     <!-- Export Modal (Reused Logic) -->
     <div id="exportModal"
         class="fixed inset-0 bg-black/50 z-50 hidden flex items-center justify-center backdrop-blur-sm p-4">
-        <div class="bg-white rounded-lg shadow-xl w-full max-w-2xl max-h-[90vh] flex flex-col overflow-hidden">
+        <div
+            class="bg-white rounded-lg shadow-xl w-[95%] sm:w-full max-w-2xl max-h-[90vh] flex flex-col overflow-hidden animate-in fade-in zoom-in duration-200">
             <div class="px-6 py-4 border-b border-[#E2E8F0] bg-[#F9F9F7] flex justify-between items-center">
                 <h3 class="font-bold text-[#2C3E50] text-lg">Export Pattern</h3>
                 <button onclick="closeExportModal()" class="text-gray-400 hover:text-gray-600">×</button>
@@ -208,9 +210,9 @@
 
     <!-- Header -->
     <header
-        class="bg-white border-b border-[#E2E8F0] px-6 py-4 flex flex-col md:flex-row justify-between items-center shadow-sm z-30 relative gap-4">
-        <div class="flex items-center gap-4">
-            <div class="bg-gradient-to-br from-[#C0392B] to-[#922B21] text-white p-2 rounded-md shadow-sm">
+        class="bg-white border-b border-[#E2E8F0] px-4 sm:px-6 py-4 flex flex-col lg:flex-row justify-between items-center shadow-sm z-30 relative gap-4">
+        <div class="flex items-center gap-4 w-full lg:w-auto justify-center lg:justify-start">
+            <div class="bg-gradient-to-br from-[#C0392B] to-[#922B21] text-white p-2 rounded-md shadow-sm shrink-0">
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                     <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
                     <path d="M14 2v6h6"></path>
@@ -225,14 +227,14 @@
             </div>
         </div>
 
-        <div class="flex items-center gap-2">
+        <div class="flex flex-col sm:flex-row items-center gap-3 w-full lg:w-auto justify-center lg:justify-end">
             <a href="index.html"
-                class="text-xs font-bold text-gray-500 hover:text-gray-800 uppercase tracking-wide mr-4">
+                class="text-xs font-bold text-gray-500 hover:text-gray-800 uppercase tracking-wide mr-0 sm:mr-4 order-2 sm:order-1">
                 &larr; Go to Cutting Dashboard
             </a>
             <input type="file" id="fileInput" accept=".xlsx, .xls" class="hidden" onchange="handleFileUpload(event)" />
 
-            <div class="flex gap-2">
+            <div class="flex gap-2 order-1 sm:order-2 w-full sm:w-auto justify-center">
                 <button onclick="clearData()"
                     class="btn-outline px-4 py-2 rounded-md text-sm font-medium text-red-600 border-red-200 hover:bg-red-50 flex items-center gap-2"
                     title="Clear saved data">
@@ -266,74 +268,80 @@
 
     <!-- Filters Toolbar -->
     <div
-        class="bg-white border-b border-[#E2E8F0] px-6 py-3 flex flex-col sm:flex-row items-center gap-4 overflow-x-auto z-20">
-        <div class="flex items-center gap-3 w-full sm:w-auto">
-            <div class="relative">
+        class="bg-white border-b border-[#E2E8F0] px-4 sm:px-6 py-3 flex flex-col xl:flex-row items-center gap-4 overflow-x-auto z-20">
+        <div
+            class="flex flex-col sm:flex-row flex-wrap items-center gap-3 w-full xl:w-auto justify-center sm:justify-start">
+            <div class="relative w-full sm:w-auto">
                 <svg class="absolute left-3 top-2 text-[#A0AEC0]" width="16" height="16" viewBox="0 0 24 24" fill="none"
                     stroke="currentColor" stroke-width="2">
                     <circle cx="11" cy="11" r="8"></circle>
                     <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
                 </svg>
                 <input type="text" id="searchInput" oninput="handleSearch()" placeholder="Search..."
-                    class="pl-9 pr-3 py-1.5 text-sm border border-[#E2E8F0] rounded-md focus:border-[#4A5568] w-32 bg-[#F9F9F7]">
+                    class="pl-9 pr-3 py-1.5 text-sm border border-[#E2E8F0] rounded-md focus:border-[#4A5568] w-full sm:w-32 bg-[#F9F9F7]">
             </div>
-            <select id="filterClass" onchange="handleFilter()"
-                class="text-sm border border-[#E2E8F0] rounded-md px-2 py-1.5">
-                <option value="">All Classes</option>
-            </select>
-            <select id="filterSection" onchange="handleFilter()"
-                class="text-sm border border-[#E2E8F0] rounded-md px-2 py-1.5">
-                <option value="">All Sections</option>
-            </select>
-            <select id="filterHouse" onchange="handleFilter()"
-                class="text-sm border border-[#E2E8F0] rounded-md px-2 py-1.5">
-                <option value="">All Houses</option>
-            </select>
-            <select id="filterGender" onchange="handleFilter()"
-                class="text-sm border border-[#E2E8F0] rounded-md px-2 py-1.5">
-                <option value="">All Genders</option>
-            </select>
 
-            <div class="h-6 w-px bg-gray-300 mx-2"></div>
+            <div class="flex flex-wrap gap-2 w-full sm:w-auto justify-center sm:justify-start">
+                <select id="filterClass" onchange="handleFilter()"
+                    class="text-sm border border-[#E2E8F0] rounded-md px-2 py-1.5 flex-1 sm:flex-none">
+                    <option value="">All Classes</option>
+                </select>
+                <select id="filterSection" onchange="handleFilter()"
+                    class="text-sm border border-[#E2E8F0] rounded-md px-2 py-1.5 flex-1 sm:flex-none">
+                    <option value="">All Sections</option>
+                </select>
+                <select id="filterHouse" onchange="handleFilter()"
+                    class="text-sm border border-[#E2E8F0] rounded-md px-2 py-1.5 flex-1 sm:flex-none">
+                    <option value="">All Houses</option>
+                </select>
+                <select id="filterGender" onchange="handleFilter()"
+                    class="text-sm border border-[#E2E8F0] rounded-md px-2 py-1.5 flex-1 sm:flex-none">
+                    <option value="">All Genders</option>
+                </select>
+            </div>
+
+            <div class="h-px w-full sm:h-6 sm:w-px bg-gray-300 mx-2 hidden sm:block"></div>
 
             <select id="filterItem" onchange="handleItemFilter()"
-                class="text-sm border border-[#E2E8F0] rounded-md px-2 py-1.5 outline-none focus:border-[#4A5568] max-w-[150px]">
+                class="text-sm border border-[#E2E8F0] rounded-md px-2 py-1.5 outline-none focus:border-[#4A5568] w-full sm:w-auto max-w-none sm:max-w-[150px]">
                 <option value="">Filter by Item</option>
             </select>
 
             <!-- Dynamic Range Filters -->
-            <div id="dynamicFilters" class="flex flex-wrap items-center gap-2"></div>
+            <div id="dynamicFilters"
+                class="flex flex-wrap items-center gap-2 justify-center sm:justify-start w-full sm:w-auto"></div>
 
-            <div class="h-6 w-px bg-gray-300 mx-2"></div>
+            <div class="h-px w-full sm:h-6 sm:w-px bg-gray-300 mx-2 hidden sm:block"></div>
 
-            <div class="h-6 w-px bg-gray-300 mx-2"></div>
+            <div class="flex gap-2 w-full sm:w-auto justify-center sm:justify-start">
+                <button onclick="resetView()"
+                    class="text-gray-500 hover:text-gray-800 text-xs font-bold uppercase mx-2 whitespace-nowrap"
+                    title="Clear all filters to create new pattern">
+                    Reset / New
+                </button>
 
-            <button onclick="resetView()" class="text-gray-500 hover:text-gray-800 text-xs font-bold uppercase mx-2"
-                title="Clear all filters to create new pattern">
-                Reset / New
-            </button>
+                <button id="btnCreatePattern" onclick="openPatternModal()"
+                    class="bg-[#2D3748] text-white px-4 py-1.5 rounded-md text-sm font-bold shadow hover:bg-[#1A202C] flex items-center gap-2 whitespace-nowrap">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M12 5v14"></path>
+                        <path d="M5 12h14"></path>
+                    </svg>
+                    Create Pattern
+                </button>
 
-            <button id="btnCreatePattern" onclick="openPatternModal()"
-                class="bg-[#2D3748] text-white px-4 py-1.5 rounded-md text-sm font-bold shadow hover:bg-[#1A202C] flex items-center gap-2">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <path d="M12 5v14"></path>
-                    <path d="M5 12h14"></path>
-                </svg>
-                Create Pattern
-            </button>
-
-            <button id="btnUpdatePattern" onclick="updatePattern()"
-                class="bg-blue-600 text-white px-4 py-1.5 rounded-md text-sm font-bold shadow hover:bg-blue-700 flex items-center gap-2 hidden">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z" />
-                    <polyline points="17 21 17 13 7 13 7 21" />
-                    <polyline points="7 3 7 8 15 8" />
-                </svg>
-                Update Pattern
-            </button>
+                <button id="btnUpdatePattern" onclick="updatePattern()"
+                    class="bg-blue-600 text-white px-4 py-1.5 rounded-md text-sm font-bold shadow hover:bg-blue-700 flex items-center gap-2 hidden whitespace-nowrap">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z" />
+                        <polyline points="17 21 17 13 7 13 7 21" />
+                        <polyline points="7 3 7 8 15 8" />
+                    </svg>
+                    Update Pattern
+                </button>
+            </div>
         </div>
 
-        <div class="text-xs text-gray-500 ml-auto">
+        <div class="text-xs text-gray-500 ml-auto w-full xl:w-auto text-center xl:text-right mt-2 xl:mt-0">
             Showing <span id="rowCount" class="font-bold text-gray-800">0</span> Records
         </div>
     </div>
