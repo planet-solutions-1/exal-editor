@@ -1,0 +1,985 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pattern Editor - Read Only Grouping</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script>window.jsPDF = window.jspdf.jsPDF;</script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js"></script>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Noto+Serif+JP:wght@300;400;500;600;700&family=Inter:wght@300;400;500;600&display=swap"
+        rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #F9F9F7;
+            color: #2C3E50;
+        }
+
+        h1,
+        h2,
+        h3,
+        h4,
+        h5,
+        h6 {
+            font-family: 'Noto Serif JP', serif;
+        }
+
+        /* Read-only cell styling */
+        .cell-read {
+            background-color: transparent;
+            width: 100%;
+            height: 100%;
+            padding: 8px;
+            border: none;
+            cursor: default;
+        }
+
+        .sticky-col {
+            position: sticky;
+            left: 0;
+            z-index: 10;
+            background-color: #FFFFFF;
+        }
+
+        .sticky-header {
+            position: sticky;
+            top: 0;
+            z-index: 20;
+        }
+
+        .no-scrollbar::-webkit-scrollbar {
+            display: none;
+        }
+
+        .no-scrollbar {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+
+        .btn-action {
+            background-color: #4A5568;
+            color: white;
+            transition: all 0.2s;
+        }
+
+        .btn-action:hover {
+            background-color: #2D3748;
+        }
+
+        .btn-primary {
+            background-color: #C0392B;
+            color: white;
+            transition: all 0.2s;
+        }
+
+        .btn-primary:hover {
+            background-color: #A93226;
+        }
+
+        .btn-outline {
+            background-color: #FFFFFF;
+            border: 1px solid #E2E8F0;
+            color: #4A5568;
+            transition: all 0.2s;
+        }
+
+        .btn-outline:hover {
+            background-color: #F7FAFC;
+            border-color: #CBD5E0;
+        }
+
+        /* Japanese Art Watermark */
+        .watermark {
+            position: absolute;
+            bottom: -50px;
+            right: -50px;
+            opacity: 0.15;
+            pointer-events: none;
+            z-index: 0;
+            width: 400px;
+            height: 400px;
+        }
+    </style>
+</head>
+
+<body class="h-screen flex flex-col overflow-hidden relative">
+
+    <svg class="watermark" viewBox="0 0 300 300" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+            <filter id="ink-blur" x="-20%" y="-20%" width="140%" height="140%">
+                <feGaussianBlur in="SourceGraphic" stdDeviation="0.5" />
+            </filter>
+        </defs>
+        <circle cx="220" cy="60" r="35" fill="#C0392B" opacity="0.8" style="mix-blend-mode: multiply;" />
+        <g stroke="#2C3E50" stroke-width="3" fill="none" stroke-linecap="round" stroke-linejoin="round" opacity="0.9">
+            <path d="M260 300 Q270 200 240 100" stroke-width="4" />
+            <path d="M220 300 Q230 250 210 180" stroke-width="2.5" />
+        </g>
+    </svg>
+
+    <!-- Create Pattern Modal -->
+    <div id="patternModal"
+        class="fixed inset-0 bg-black/50 z-50 hidden flex items-center justify-center backdrop-blur-sm p-4">
+        <div class="bg-white rounded-lg shadow-xl w-full max-w-md flex flex-col overflow-hidden">
+            <div class="px-6 py-4 border-b border-[#E2E8F0] bg-[#F9F9F7]">
+                <h3 class="font-bold text-[#2C3E50] text-lg">Create Pattern Group</h3>
+            </div>
+            <div class="p-6 space-y-4">
+                <div>
+                    <label class="block text-xs font-semibold text-[#7F8C8D] uppercase mb-1">Pattern Name</label>
+                    <input type="text" id="newPatternName"
+                        class="w-full border border-gray-300 rounded p-2 text-sm focus:border-blue-500 outline-none"
+                        placeholder="e.g. Class 10 Boys Bundle">
+                </div>
+                <div class="bg-blue-50 p-3 rounded text-xs text-blue-800 border border-blue-100">
+                    <p>Current Filters will be saved with this pattern.</p>
+                    <p class="mt-1 font-bold">Students: <span id="patternCountDisplay">0</span></p>
+                </div>
+            </div>
+            <div class="px-6 py-4 border-t border-[#E2E8F0] bg-[#F9F9F7] flex justify-end gap-3">
+                <button onclick="document.getElementById('patternModal').classList.add('hidden')"
+                    class="btn-outline px-4 py-2 rounded text-sm">Cancel</button>
+                <button onclick="savePattern()" class="btn-primary px-6 py-2 rounded text-sm shadow-md">Create
+                    Pattern</button>
+            </div>
+        </div>
+    </div>
+
+
+    <!-- Export Modal (Reused Logic) -->
+    <div id="exportModal"
+        class="fixed inset-0 bg-black/50 z-50 hidden flex items-center justify-center backdrop-blur-sm p-4">
+        <div class="bg-white rounded-lg shadow-xl w-full max-w-2xl max-h-[90vh] flex flex-col overflow-hidden">
+            <div class="px-6 py-4 border-b border-[#E2E8F0] bg-[#F9F9F7] flex justify-between items-center">
+                <h3 class="font-bold text-[#2C3E50] text-lg">Export Pattern</h3>
+                <button onclick="closeExportModal()" class="text-gray-400 hover:text-gray-600">×</button>
+            </div>
+            <div class="p-6 space-y-4 overflow-y-auto">
+                <div class="grid grid-cols-2 gap-4">
+                    <div><label class="block text-xs uppercase text-gray-500">School Name</label><input type="text"
+                            id="metaSchool" class="w-full border p-2 rounded text-sm"></div>
+                    <div><label class="block text-xs uppercase text-gray-500">Pattern Code</label><input type="text"
+                            id="metaPattern" class="w-full border p-2 rounded text-sm"></div>
+                </div>
+                <div><label class="block text-xs uppercase text-gray-500">Description</label><textarea id="metaDesc"
+                        rows="2" class="w-full border p-2 rounded text-sm"></textarea></div>
+
+                <div class="bg-[#F0F4F8] p-4 rounded-md border border-[#CBD5E0]">
+                    <div class="flex justify-between items-center mb-2">
+                        <label class="text-xs font-bold uppercase">Cloth Consumption (M/Student)</label>
+                        <input type="number" id="metaConsumption" step="0.01" class="w-32 border p-1 rounded text-right"
+                            placeholder="0.00" oninput="updateExportTotal()">
+                    </div>
+                    <div class="flex justify-between text-xs text-gray-500 pt-2 border-t border-gray-300">
+                        <span>Total Cloth Needed:</span>
+                        <span id="exportTotalCloth" class="font-bold text-lg text-gray-800">0.00 M</span>
+                    </div>
+                </div>
+
+                <!-- Additional Metadata Fields -->
+                <div>
+                    <label class="block text-xs uppercase text-gray-500">Cloth Details</label>
+                    <textarea id="metaClothDetails" rows="2" class="w-full border p-2 rounded text-sm"
+                        placeholder="e.g. Cotton 100%"></textarea>
+                </div>
+                <div>
+                    <label class="block text-xs uppercase text-gray-500">Special Requirements</label>
+                    <textarea id="metaSpecialReq" rows="2" class="w-full border p-2 rounded text-sm"
+                        placeholder="Any special instructions..."></textarea>
+                </div>
+
+                <div class="text-xs text-gray-500 bg-gray-50 p-2 rounded border border-gray-200">
+                    <strong>Filters in this Pattern:</strong> <span id="exportFilters" class="italic"></span>
+                </div>
+            </div>
+            <div class="px-6 py-4 border-t bg-[#F9F9F7] flex justify-end gap-3">
+                <button onclick="confirmExportPDF()"
+                    class="btn-outline px-4 py-2 rounded text-sm text-red-600 border-red-200 hover:bg-red-50">Export
+                    PDF</button>
+                <button onclick="confirmExport()" class="btn-action px-6 py-2 rounded text-sm">Export Excel</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Header -->
+    <header
+        class="bg-white border-b border-[#E2E8F0] px-6 py-4 flex flex-col md:flex-row justify-between items-center shadow-sm z-30 relative gap-4">
+        <div class="flex items-center gap-4">
+            <div class="bg-gradient-to-br from-[#C0392B] to-[#922B21] text-white p-2 rounded-md shadow-sm">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                    <path d="M14 2v6h6"></path>
+                    <path d="M16 13H8"></path>
+                    <path d="M16 17H8"></path>
+                    <path d="M10 9H8"></path>
+                </svg>
+            </div>
+            <div>
+                <h1 class="text-2xl font-serif text-[#2D3748] tracking-tight">Pattern Dashboard</h1>
+                <p class="text-xs text-[#7F8C8D] tracking-wide">READ-ONLY GROUPING SYSTEM</p>
+            </div>
+        </div>
+
+        <div class="flex items-center gap-2">
+            <a href="index.html"
+                class="text-xs font-bold text-gray-500 hover:text-gray-800 uppercase tracking-wide mr-4">
+                &larr; Go to Cutting Dashboard
+            </a>
+            <input type="file" id="fileInput" accept=".xlsx, .xls" class="hidden" onchange="handleFileUpload(event)" />
+
+            <div class="flex gap-2">
+                <button onclick="clearData()"
+                    class="btn-outline px-4 py-2 rounded-md text-sm font-medium text-red-600 border-red-200 hover:bg-red-50 flex items-center gap-2"
+                    title="Clear saved data">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <polyline points="3 6 5 6 21 6" />
+                        <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+                    </svg>
+                    Clear Data
+                </button>
+                <button onclick="document.getElementById('fileInput').click()"
+                    class="btn-outline px-4 py-2 rounded-md text-sm font-medium flex items-center gap-2">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                        <polyline points="17 8 12 3 7 8"></polyline>
+                        <line x1="12" y1="3" x2="12" y2="15"></line>
+                    </svg>
+                    Import Excel
+                </button>
+            </div>
+    </header>
+
+    <!-- Pattern List & Toolbar -->
+    <div
+        class="bg-[#F8F9FA] border-b border-[#E2E8F0] px-6 py-2 flex items-center gap-4 overflow-x-auto whitespace-nowrap">
+        <span class="text-xs font-bold text-gray-400 uppercase tracking-wider">Saved Patterns:</span>
+        <div id="patternList" class="flex gap-2">
+            <!-- Patterns inserted here -->
+            <span class="text-xs text-gray-400 italic py-1">No patterns created yet.</span>
+        </div>
+    </div>
+
+    <!-- Filters Toolbar -->
+    <div
+        class="bg-white border-b border-[#E2E8F0] px-6 py-3 flex flex-col sm:flex-row items-center gap-4 overflow-x-auto z-20">
+        <div class="flex items-center gap-3 w-full sm:w-auto">
+            <div class="relative">
+                <svg class="absolute left-3 top-2 text-[#A0AEC0]" width="16" height="16" viewBox="0 0 24 24" fill="none"
+                    stroke="currentColor" stroke-width="2">
+                    <circle cx="11" cy="11" r="8"></circle>
+                    <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+                </svg>
+                <input type="text" id="searchInput" oninput="handleSearch()" placeholder="Search..."
+                    class="pl-9 pr-3 py-1.5 text-sm border border-[#E2E8F0] rounded-md focus:border-[#4A5568] w-32 bg-[#F9F9F7]">
+            </div>
+            <select id="filterClass" onchange="handleFilter()"
+                class="text-sm border border-[#E2E8F0] rounded-md px-2 py-1.5">
+                <option value="">All Classes</option>
+            </select>
+            <select id="filterSection" onchange="handleFilter()"
+                class="text-sm border border-[#E2E8F0] rounded-md px-2 py-1.5">
+                <option value="">All Sections</option>
+            </select>
+            <select id="filterHouse" onchange="handleFilter()"
+                class="text-sm border border-[#E2E8F0] rounded-md px-2 py-1.5">
+                <option value="">All Houses</option>
+            </select>
+            <select id="filterGender" onchange="handleFilter()"
+                class="text-sm border border-[#E2E8F0] rounded-md px-2 py-1.5">
+                <option value="">All Genders</option>
+            </select>
+
+            <div class="h-6 w-px bg-gray-300 mx-2"></div>
+
+            <select id="filterItem" onchange="handleItemFilter()"
+                class="text-sm border border-[#E2E8F0] rounded-md px-2 py-1.5 outline-none focus:border-[#4A5568] max-w-[150px]">
+                <option value="">Filter by Item</option>
+            </select>
+
+            <!-- Dynamic Range Filters -->
+            <div id="dynamicFilters" class="flex flex-wrap items-center gap-2"></div>
+
+            <div class="h-6 w-px bg-gray-300 mx-2"></div>
+
+            <div class="h-6 w-px bg-gray-300 mx-2"></div>
+
+            <button onclick="resetView()" class="text-gray-500 hover:text-gray-800 text-xs font-bold uppercase mx-2"
+                title="Clear all filters to create new pattern">
+                Reset / New
+            </button>
+
+            <button id="btnCreatePattern" onclick="openPatternModal()"
+                class="bg-[#2D3748] text-white px-4 py-1.5 rounded-md text-sm font-bold shadow hover:bg-[#1A202C] flex items-center gap-2">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M12 5v14"></path>
+                    <path d="M5 12h14"></path>
+                </svg>
+                Create Pattern
+            </button>
+
+            <button id="btnUpdatePattern" onclick="updatePattern()"
+                class="bg-blue-600 text-white px-4 py-1.5 rounded-md text-sm font-bold shadow hover:bg-blue-700 flex items-center gap-2 hidden">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z" />
+                    <polyline points="17 21 17 13 7 13 7 21" />
+                    <polyline points="7 3 7 8 15 8" />
+                </svg>
+                Update Pattern
+            </button>
+        </div>
+
+        <div class="text-xs text-gray-500 ml-auto">
+            Showing <span id="rowCount" class="font-bold text-gray-800">0</span> Records
+        </div>
+    </div>
+
+    <!-- Main Content -->
+    <main class="flex-1 overflow-auto relative bg-[#F9F9F7]/90 z-10 flex flex-col">
+        <div id="tableView" class="flex-1 overflow-auto">
+            <table class="w-full border-collapse text-sm">
+                <thead id="tableHead"
+                    class="bg-white text-gray-500 font-medium text-xs uppercase sticky-header shadow-sm"></thead>
+                <tbody id="tableBody" class="bg-white/80 backdrop-blur-sm"></tbody>
+            </table>
+        </div>
+    </main>
+
+    <script>
+        let data = [];
+        let patterns = [];
+        let currentWorkbook = null;
+        let loadedPatternId = null;
+
+        let filters = { search: '', class: '', section: '', house: '', gender: '', item: '', components: {} };
+
+        // Persistence Keys
+        const STORAGE_KEY_DATA = 'pattern_dashboard_data';
+        const STORAGE_KEY_PATTERNS = 'pattern_dashboard_patterns';
+
+        // --- PERSISTENCE ---
+        function saveToLocal() {
+            try {
+                localStorage.setItem(STORAGE_KEY_DATA, JSON.stringify(data));
+                localStorage.setItem(STORAGE_KEY_PATTERNS, JSON.stringify(patterns));
+            } catch (e) {
+                console.warn("Storage full or disabled", e);
+            }
+        }
+
+        function loadFromLocal() {
+            try {
+                const sData = localStorage.getItem(STORAGE_KEY_DATA);
+                const sPatterns = localStorage.getItem(STORAGE_KEY_PATTERNS);
+                if (sData) {
+                    data = JSON.parse(sData);
+                    populateFilters();
+                    renderTable();
+                    updateCount();
+                }
+                if (sPatterns) {
+                    patterns = JSON.parse(sPatterns);
+                    renderModules();
+                }
+            } catch (e) { console.error(e); }
+        }
+
+        function clearData() {
+            if (confirm("Are you sure you want to clear all data and patterns? This cannot be undone.")) {
+                localStorage.removeItem(STORAGE_KEY_DATA);
+                localStorage.removeItem(STORAGE_KEY_PATTERNS);
+                location.reload();
+            }
+        }
+
+        // Load on Init
+        window.addEventListener('DOMContentLoaded', loadFromLocal);
+
+        // Constants
+        const infoCols = ["S.No", "Roll No", "Admission No", "Student Name", "Class", "Section", "House", "Gender", "Absent/Present"];
+        const measureCols = ["U1", "U2", "U3", "U4", "U5", "U6", "U7", "U8", "L1", "L2", "L3", "L4", "L5", "L6", "L7", "L8"];
+
+        // Item Definitions
+        const boysItems = [
+            { name: "BOYS - FORMAL SHIRT", cols: ["U1", "U2", "U3", "U4", "U6"], type: "Male" },
+            { name: "BOYS - TRACK T-SHIRT", cols: ["U1", "U2", "U3", "U4", "U6"], type: "Male" },
+            { name: "BOYS - UNIFORM T-SHIRT", cols: ["U1", "U2", "U3", "U4", "U6"], type: "Male" },
+            { name: "BOYS - JERKIN", cols: ["U1", "U2", "U3", "U4", "U5"], type: "Male" },
+            { name: "BOYS - PULLOVER", cols: ["U1", "U2", "U3", "U4", "U5"], type: "Male" },
+            { name: "BOYS - FORMAL PANT", cols: ["L1", "L2"], type: "Male" },
+            { name: "BOYS - TRACK PANT", cols: ["L1", "L2"], type: "Male" },
+            { name: "BOYS - FORMAL SHORTS", cols: ["L3", "L2"], type: "Male" },
+            { name: "BOYS - TRACK SHORTS", cols: ["L3", "L2"], type: "Male" },
+            { name: "BOYS - PANT SPECIAL CASE", cols: ["L1", "L2", "L6", "L7"], type: "Male" },
+        ];
+        const girlsItems = [
+            { name: "GIRLS - FORMAL SHIRT", cols: ["U1", "U2", "U3", "U4", "U6"], type: "Female" },
+            { name: "GIRLS - TRACK T-SHIRT", cols: ["U1", "U2", "U3", "U4", "U6"], type: "Female" },
+            { name: "GIRLS - UNIFORM T-SHIRT", cols: ["U1", "U2", "U3", "U4", "U6"], type: "Female" },
+            { name: "GIRLS - JERKIN", cols: ["U1", "U2", "U3", "U4", "U5"], type: "Female" },
+            { name: "GIRLS - FULL SLEEVE SHIRT", cols: ["U1", "U2", "U3", "U4", "U5"], type: "Female" },
+            { name: "GIRLS - PULLOVER", cols: ["U1", "U2", "U3", "U4", "U5"], type: "Female" },
+            { name: "GIRLS - KURTHA SHIRT", cols: ["U7", "U2", "U3", "U4", "U6"], type: "Female" },
+            { name: "GIRLS - SPECIAL FROCKS", cols: ["U7", "U2", "U3", "U4", "U6"], type: "Female" },
+            { name: "GIRLS - FORMAL PANT", cols: ["L1", "L2"], type: "Female" },
+            { name: "GIRLS - TRACK PANT", cols: ["L1", "L2"], type: "Female" },
+            { name: "GIRLS - TRACK SHORTS", cols: ["L3", "L2"], type: "Female" },
+            { name: "GIRLS - PINOFORE", cols: ["L4", "L2"], type: "Female" },
+            { name: "GIRLS - SKIRT", cols: ["L5", "L2"], type: "Female" },
+            { name: "GIRLS - PANT SPECIAL CASE", cols: ["L1", "L2", "L6", "L7"], type: "Female" },
+        ];
+        const allItems = [...boysItems, ...girlsItems];
+
+        // --- CORE FUNCTIONS ---
+
+        async function handleFileUpload(e) {
+            const file = e.target.files[0];
+            if (!file) return;
+            const ab = await file.arrayBuffer();
+            currentWorkbook = XLSX.read(ab);
+            const ws = currentWorkbook.Sheets[currentWorkbook.SheetNames[0]];
+
+            let headerRowIndex = 0;
+            const rawRows = XLSX.utils.sheet_to_json(ws, { header: 1 });
+            for (let i = 0; i < Math.min(rawRows.length, 20); i++) {
+                const rowStr = JSON.stringify(rawRows[i] || []).toLowerCase();
+                if (rowStr.includes("student") && rowStr.includes("name")) { headerRowIndex = i; break; }
+            }
+
+            const jsonData = XLSX.utils.sheet_to_json(ws, { range: headerRowIndex, defval: "" });
+
+            // RELIABLE IMPORT (Array Mode) to fix Quantity Mapping
+            const headerRow = rawRows[headerRowIndex];
+            const dataRows = rawRows.slice(headerRowIndex + 1);
+
+            data = dataRows.map((rArr, i) => {
+                const newRow = {};
+                // fill info/measures
+                infoCols.forEach(col => {
+                    const idx = headerRow.findIndex(h => h && h.toString().trim().toLowerCase() === col.toLowerCase());
+                    if (idx !== -1) newRow[col] = rArr[idx];
+                });
+                measureCols.forEach(col => {
+                    const idx = headerRow.findIndex(h => h && h.toString().startsWith(col));
+                    if (idx !== -1) newRow[col] = rArr[idx] || "00";
+                    else newRow[col] = "00";
+                });
+
+                // Fill Quantities by Header Position - Robust Logic
+                allItems.forEach(item => {
+                    const itemIdx = headerRow.indexOf(item.name);
+                    if (itemIdx !== -1) {
+                        // Assume Qty is next
+                        const nextCol = headerRow[itemIdx + 1];
+                        if (nextCol && (nextCol.toString().toLowerCase().includes("qty") || nextCol.toString().toLowerCase().includes("quantity"))) {
+                            newRow[`Qty_${item.name}`] = rArr[itemIdx + 1];
+                        }
+                    }
+                });
+
+                if (!newRow["S.No"]) newRow["S.No"] = i + 1;
+                return newRow;
+            });
+
+            populateFilters();
+
+            // Auto-Detect Item Logic
+            // If the uploaded file contains a column header matching an item name, auto-select it.
+            let detectedItem = null;
+            if (headerRow) {
+                for (const item of allItems) {
+                    if (headerRow.some(h => h && h.toString().trim() === item.name)) {
+                        detectedItem = item.name;
+                        break; // Prioritize the first one found
+                    }
+                }
+            }
+
+            if (detectedItem) {
+                document.getElementById('filterItem').value = detectedItem;
+                handleItemFilter(); // This handles rendering
+                // Also trigger basic filter update to ensure state consistency
+                // handleFilter(); 
+            } else {
+                renderTable();
+                updateCount();
+            }
+            saveToLocal(); // Save new data
+        }
+
+        function populateFilters() {
+            const getOpts = (key) => [...new Set(data.map(r => r[key]).filter(Boolean))].sort();
+            const updateSelect = (id, opts, label) => {
+                const el = document.getElementById(id);
+                // Preserve value if possible, but usually we reset on new file
+                const currentVal = el.value;
+                el.innerHTML = `<option value="">${label}</option>` + opts.map(o => `<option value="${o}">${o}</option>`).join('');
+                if (opts.includes(currentVal)) el.value = currentVal;
+            };
+
+            updateSelect('filterClass', getOpts('Class'), 'All Classes');
+            updateSelect('filterSection', getOpts('Section'), 'All Sections');
+            updateSelect('filterHouse', getOpts('House'), 'All Houses');
+            updateSelect('filterGender', getOpts('Gender'), 'All Genders');
+
+            const itemSelect = document.getElementById('filterItem');
+            // We want to keep the list of ALL items, not just present ones?
+            // Actually, showing only present items might be better UX?
+            // "pattern dashboard" should allow filtering by any known item type to create new patterns?
+            // No, stick to allItems as defined constantly.
+            itemSelect.innerHTML = '<option value="">Filter by Item</option>' + allItems.map(i => `<option value="${i.name}">${i.name}</option>`).join('');
+        }
+
+        function handleFilter() {
+            filters.class = document.getElementById('filterClass').value;
+            filters.section = document.getElementById('filterSection').value;
+            filters.house = document.getElementById('filterHouse').value;
+            filters.gender = document.getElementById('filterGender').value;
+            renderTable();
+            updateCount();
+        }
+
+        function handleItemFilter() {
+            const itemName = document.getElementById('filterItem').value;
+            filters.item = itemName;
+            filters.components = {};
+            const container = document.getElementById('dynamicFilters');
+            container.innerHTML = '';
+
+            if (itemName) {
+                const item = allItems.find(i => i.name === itemName);
+                if (item) {
+                    item.cols.forEach(col => {
+                        const values = [...new Set(data.map(r => r[col]).filter(v => v && v !== "00"))].sort();
+
+                        const wrapper = document.createElement('div');
+                        wrapper.className = "relative inline-block";
+
+                        const input = document.createElement('input');
+                        input.setAttribute('list', `list-${col}`);
+                        input.type = "text";
+                        input.placeholder = col;
+                        input.className = "text-sm border border-[#E2E8F0] rounded-md px-2 py-1.5 outline-none focus:border-[#4A5568] w-20 text-gray-600";
+
+                        const dl = document.createElement('datalist');
+                        dl.id = `list-${col}`;
+                        dl.innerHTML = values.map(v => `<option value="${v}">`).join('');
+
+                        input.onchange = (e) => {
+                            if (e.target.value) filters.components[col] = e.target.value;
+                            else delete filters.components[col];
+                            renderTable();
+                            updateCount();
+                        };
+
+                        wrapper.appendChild(input);
+                        wrapper.appendChild(dl);
+                        container.appendChild(wrapper);
+                    });
+                }
+            }
+            renderTable();
+            updateCount();
+        }
+
+        function handleSearch() {
+            filters.search = document.getElementById('searchInput').value.toLowerCase();
+            renderTable();
+            updateCount();
+        }
+
+        function getFilteredData() {
+            return data.filter(row => {
+                // 1. Basic Filters
+                const matchSearch = !filters.search || Object.values(row).some(v => String(v).toLowerCase().includes(filters.search));
+                const matchClass = !filters.class || row.Class == filters.class;
+                const matchSection = !filters.section || row.Section == filters.section;
+                const matchHouse = !filters.house || row.House == filters.house;
+                const matchGender = !filters.gender || row.Gender == filters.gender;
+
+                // 2. Item Gender Logic
+                let matchItem = true;
+                if (filters.item) {
+                    const item = allItems.find(i => i.name === filters.item);
+                    if (item) {
+                        const gender = (row.Gender || "").toUpperCase();
+                        if (item.type === "Male" && gender !== "MALE") matchItem = false;
+                        if (item.type === "Female" && gender !== "FEMALE") matchItem = false;
+                    }
+                }
+
+                // 3. Component Range Logic (The "Advanced" part)
+                let matchComp = true;
+                if (filters.item) {
+                    Object.keys(filters.components).forEach(col => {
+                        const filterVal = filters.components[col];
+                        const rowVal = row[col];
+                        // Range e.g. "30-32"
+                        if (filterVal.includes('-')) {
+                            const [min, max] = filterVal.split('-').map(Number);
+                            if (!isNaN(min) && !isNaN(max)) {
+                                const valNum = parseFloat(rowVal);
+                                if (isNaN(valNum) || valNum < min || valNum > max) matchComp = false;
+                            } else {
+                                if (String(rowVal) !== filterVal) matchComp = false; // fallback
+                            }
+                        } else {
+                            if (String(rowVal) !== filterVal) matchComp = false;
+                        }
+                    });
+                }
+
+                return matchSearch && matchClass && matchSection && matchHouse && matchGender && matchItem && matchComp;
+            });
+        }
+
+        function calculateItemValue(row, item) {
+            const parts = item.cols.map(col => {
+                const v = row[col];
+                return (v && v !== '00') ? v : "00";
+            });
+            return parts.join(",");
+        }
+
+        function renderTable() {
+            const filtered = getFilteredData();
+            const thead = document.getElementById('tableHead');
+            const tbody = document.getElementById('tableBody');
+
+            // Header
+            let h = `<tr class="bg-[#F7FAFC]">
+                <th class="p-3 border-b border-r min-w-[50px] text-center font-bold text-gray-600">#</th>
+                <th class="p-3 border-b border-r min-w-[200px] text-left font-bold text-gray-600 sticky-col z-20">Student Name</th>
+                <th class="p-3 border-b border-r min-w-[80px]">Class</th>
+                <th class="p-3 border-b border-r min-w-[80px]">Sec</th>
+                <th class="p-3 border-b border-r min-w-[80px]">Gender</th>
+                <th class="p-3 border-b border-r min-w-[100px]">Adm No</th>`;
+
+            measureCols.forEach(c => {
+                const color = c.startsWith('U') ? 'text-blue-600 bg-blue-50' : 'text-green-600 bg-green-50';
+                h += `<th class="p-2 border-b border-r ${color} text-center text-xs font-mono">${c}</th>`;
+            });
+            // Add Item Columns if Filtered
+            const activeItemName = document.getElementById('filterItem') ? document.getElementById('filterItem').value : null;
+            if (activeItemName) {
+                h += `<th class="p-3 border-b border-r bg-purple-50 text-purple-700 font-bold min-w-[150px] sticky-col z-20" style="left: 200px;">${activeItemName}</th>`;
+                h += `<th class="p-3 border-b border-r bg-yellow-50 text-yellow-700 font-bold min-w-[80px]">Qty</th>`;
+            }
+
+            h += `</tr>`;
+            thead.innerHTML = h;
+
+            // Body
+            tbody.innerHTML = filtered.map((row, i) => {
+                let r = `<tr class="hover:bg-gray-50 border-b border-gray-100">
+                    <td class="p-2 border-r text-center text-xs text-gray-400 font-mono">${row["S.No"]}</td>
+                    <td class="p-2 border-r font-medium text-gray-700 sticky-col bg-white">${row["Student Name"]}</td>
+                    <td class="p-2 border-r text-center text-gray-600 text-xs">${row["Class"]}</td>
+                    <td class="p-2 border-r text-center text-gray-600 text-xs">${row["Section"]}</td>
+                    <td class="p-2 border-r text-center text-gray-600 text-xs">${row["Gender"]}</td>
+                    <td class="p-2 border-r text-center text-gray-600 text-xs text-mono">${row["Admission No"]}</td>`;
+
+                measureCols.forEach(c => {
+                    let val = row[c];
+                    if (val === '00' || val === '0') val = '';
+                    r += `<td class="p-2 border-r text-center font-mono text-gray-600 text-sm">${val}</td>`;
+                });
+                if (activeItemName) {
+                    const item = allItems.find(i => i.name === activeItemName);
+                    if (item) {
+                        const calcVal = calculateItemValue(row, item);
+                        const qty = row[`Qty_${item.name}`] || "";
+                        r += `<td class="p-2 border-r text-center text-xs text-purple-700 font-mono bg-purple-50/30 font-bold">${calcVal}</td>`;
+                        r += `<td class="p-2 border-r text-center text-sm font-bold text-yellow-700 bg-yellow-50/30">${qty}</td>`;
+                    }
+                }
+
+                r += `</tr>`;
+                return r;
+            }).join('');
+        }
+
+        function updateCount() {
+            const count = getFilteredData().length;
+            document.getElementById('rowCount').textContent = count;
+            document.getElementById('patternCountDisplay').textContent = count;
+        }
+
+        // --- PATTERN LOGIC ---
+
+        function openPatternModal() {
+            if (getFilteredData().length === 0) {
+                alert("No data to group! Import a file or adjust filters.");
+                return;
+            }
+            document.getElementById('newPatternName').value = `Pattern ${patterns.length + 1}`;
+            updateCount();
+            document.getElementById('patternModal').classList.remove('hidden');
+        }
+
+        function savePattern() {
+            const name = document.getElementById('newPatternName').value;
+            if (!name) return alert("Enter a pattern name");
+
+            // Capture Advanced Filters too
+            const currentFilters = JSON.parse(JSON.stringify(filters));
+
+            const pattern = {
+                id: Date.now(),
+                name: name,
+                filters: currentFilters,
+                count: getFilteredData().length
+            };
+
+            patterns.push(pattern);
+            renderModules();
+            saveToLocal(); // Save patterns
+            saveToLocal(); // Save patterns
+            document.getElementById('patternModal').classList.add('hidden');
+            // Auto-load the new pattern to allow immediate editing? 
+            // Better to stay in "Create" mode or switch? 
+            // Let's just reset view to prompt user to start fresh OR keep filters?
+            // Standard: keep filters, but user might want to reset.
+        }
+
+        function updatePattern() {
+            if (!loadedPatternId) return;
+            const pIndex = patterns.findIndex(p => p.id === loadedPatternId);
+            if (pIndex === -1) return;
+
+            if (confirm(`Update pattern "${patterns[pIndex].name}" with current filters?`)) {
+                patterns[pIndex].filters = JSON.parse(JSON.stringify(filters));
+                patterns[pIndex].count = getFilteredData().length;
+                renderModules();
+                saveToLocal();
+                alert("Pattern updated successfully!");
+            }
+        }
+
+        function renderModules() {
+            const container = document.getElementById('patternList');
+            if (patterns.length === 0) {
+                container.innerHTML = '<span class="text-xs text-gray-400 italic py-1">No patterns created yet.</span>';
+                return;
+            }
+
+            container.innerHTML = patterns.map(p => `
+                <div class="flex items-center gap-2 bg-white border border-gray-200 rounded-md px-3 py-1 text-sm shadow-sm group">
+                    <button onclick="loadPattern(${p.id})" class="text-blue-600 font-bold hover:underline" title="Load Filters">${p.name}</button>
+                    <span class="text-xs text-gray-400 font-mono">(${p.count})</span>
+                    <button onclick="openExportForPattern(${p.id})" class="text-gray-400 hover:text-green-600 ml-1" title="Export Pattern">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                    </button>
+                    <button onclick="deletePattern(${p.id})" class="text-gray-300 hover:text-red-500 ml-1 opacity-0 group-hover:opacity-100 transition-opacity">×</button>
+                </div>
+            `).join('');
+        }
+
+        function loadPattern(id) {
+            const p = patterns.find(x => x.id === id);
+            if (!p) return;
+
+            filters = JSON.parse(JSON.stringify(p.filters));
+
+            // Restore Inputs
+            document.getElementById('searchInput').value = filters.search;
+            document.getElementById('filterClass').value = filters.class;
+            document.getElementById('filterSection').value = filters.section;
+            document.getElementById('filterHouse').value = filters.house;
+            document.getElementById('filterGender').value = filters.gender;
+
+            // Restore Item Filters & Datalists
+            document.getElementById('filterItem').value = filters.item;
+
+            // Re-trigger item filter rendering to show dyanmic controls
+            handleItemFilter();
+
+            // Now restore the dynamic component values
+            const container = document.getElementById('dynamicFilters');
+            if (filters.components) {
+                Array.from(container.children).forEach(wrapper => {
+                    const input = wrapper.querySelector('input');
+                    if (input && filters.components[input.placeholder]) {
+                        input.value = filters.components[input.placeholder];
+                    }
+                });
+            }
+
+            renderTable();
+            updateCount();
+            alert(`Loaded pattern: ${p.name}`);
+
+            // Enter "Update Mode"
+            loadedPatternId = p.id;
+            document.getElementById('btnCreatePattern').classList.add('hidden');
+            document.getElementById('btnUpdatePattern').classList.remove('hidden');
+        }
+
+        function resetView() {
+            // Clear Filters
+            document.getElementById('searchInput').value = '';
+            document.getElementById('filterClass').value = '';
+            document.getElementById('filterSection').value = '';
+            document.getElementById('filterHouse').value = '';
+            document.getElementById('filterGender').value = '';
+            document.getElementById('filterItem').value = '';
+
+            // Clear internal state
+            filters = { search: '', class: '', section: '', house: '', gender: '', item: '', components: {} };
+
+            // Re-render
+            handleItemFilter(); // Clears dynamic
+            // handleFilter() called internally? no, manual reset
+            renderTable();
+            updateCount();
+
+            // Reset Mode
+            loadedPatternId = null;
+            document.getElementById('btnCreatePattern').classList.remove('hidden');
+            document.getElementById('btnUpdatePattern').classList.add('hidden');
+        }
+
+        function deletePattern(id) {
+            if (confirm("Remove this pattern group?")) {
+                patterns = patterns.filter(p => p.id !== id);
+                renderModules();
+                saveToLocal(); // Update storage
+            }
+        }
+
+        // --- EXPORT LOGIC ---
+
+        let currentExportPatternId = null;
+
+        function openExportForPattern(id) {
+            currentExportPatternId = id;
+            const p = patterns.find(x => x.id === id);
+
+            document.getElementById('metaPattern').value = p.name;
+            document.getElementById('exportFilters').textContent = p.name; // Simplified filter text
+
+            // Must Ensure Data is Correct (Reload Filters quietly)
+            // Ideally we should cache the data keys, but reloading filters is safest for "what will be exported"
+            loadPattern(id);
+
+            document.getElementById('exportModal').classList.remove('hidden');
+            updateExportTotal();
+        }
+
+        function closeExportModal() {
+            document.getElementById('exportModal').classList.add('hidden');
+        }
+
+        function updateExportTotal() {
+            const consumption = parseFloat(document.getElementById('metaConsumption').value) || 0;
+            const filtered = getFilteredData();
+            // Count "Active" Students: For simplistic grouping, every row is a student.
+            const total = (filtered.length * consumption).toFixed(2);
+            document.getElementById('exportTotalCloth').textContent = `${total} M`;
+        }
+
+        async function confirmExportPDF() {
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF({ orientation: 'landscape' });
+
+            // Metadata Block
+            const school = document.getElementById('metaSchool').value;
+            const code = document.getElementById('metaPattern').value;
+            const desc = document.getElementById('metaDesc').value;
+            const cloth = document.getElementById('metaClothDetails').value;
+            const req = document.getElementById('metaSpecialReq').value;
+            const totalCloth = document.getElementById('exportTotalCloth').textContent;
+
+            let y = 15;
+            doc.setFontSize(14); doc.text(`Pattern Group: ${code}`, 14, y); y += 8;
+            doc.setFontSize(10);
+            if (school) { doc.text(`School: ${school}`, 14, y); y += 6; }
+            if (desc) { doc.text(`Desc: ${desc}`, 14, y); y += 6; }
+            if (cloth) { doc.text(`Cloth: ${cloth}`, 14, y); y += 6; }
+            if (req) { doc.text(`Special: ${req}`, 14, y); y += 6; }
+            doc.text(`Total Qty: ${getFilteredData().length} Students | Total Cloth: ${totalCloth}`, 14, y); y += 10;
+
+            // Determine Cols
+            const activeItemName = filters.item;
+            const itemHeaders = activeItemName ? [activeItemName, "Qty"] : [];
+
+            const rows = getFilteredData().map(r => {
+                const base = [r['Roll No'], r['Student Name'], r['Class'], r['Section'], ...measureCols.map(m => r[m])];
+                if (activeItemName) {
+                    const item = allItems.find(i => i.name === activeItemName);
+                    if (item) {
+                        base.push(calculateItemValue(r, item));
+                        base.push(r[`Qty_${item.name}`] || "");
+                    }
+                }
+                return base;
+            });
+
+            doc.autoTable({
+                head: [['Roll', 'Name', 'Class', 'Sec', ...measureCols, ...itemHeaders]],
+                body: rows,
+                startY: y,
+                styles: { fontSize: 8, cellPadding: 2 }
+            });
+            doc.save(`Pattern_${code}.pdf`);
+            closeExportModal();
+        }
+
+        function confirmExport() {
+            const wb = XLSX.utils.book_new();
+            const filtered = getFilteredData();
+
+            const school = document.getElementById('metaSchool').value;
+            const code = document.getElementById('metaPattern').value;
+            const desc = document.getElementById('metaDesc').value;
+            const cloth = document.getElementById('metaClothDetails').value;
+            const req = document.getElementById('metaSpecialReq').value;
+            const totalCloth = document.getElementById('exportTotalCloth').textContent;
+
+
+
+            const activeItemName = filters.item;
+            const itemHeaders = activeItemName ? [activeItemName, "Quantity"] : [];
+
+            const wsData = [
+                ["PATTERN GROUP EXPORT"],
+                ["Pattern Code", code],
+                ["School Name", school],
+                ["Description", desc],
+                ["Cloth Details", cloth],
+                ["Special Requirements", req],
+                ["Total Cloth Needed", totalCloth],
+                ["Total Students", filtered.length],
+                [],
+                ["Roll No", "Student Name", "Class", "Section", "Gender", ...measureCols, ...itemHeaders]
+            ];
+
+            filtered.forEach(r => {
+                const rowArr = [
+                    r['Roll No'], r['Student Name'], r['Class'], r['Section'], r['Gender'],
+                    ...measureCols.map(m => r[m])
+                ];
+                if (activeItemName) {
+                    const item = allItems.find(i => i.name === activeItemName);
+                    if (item) {
+                        rowArr.push(calculateItemValue(r, item));
+                        rowArr.push(r[`Qty_${item.name}`] || "");
+                    }
+                }
+                wsData.push(rowArr);
+            });
+
+            const ws = XLSX.utils.aoa_to_sheet(wsData);
+            XLSX.utils.book_append_sheet(wb, ws, "Pattern");
+            XLSX.writeFile(wb, `Pattern_${code}.xlsx`);
+            closeExportModal();
+        }
+
+    </script>
+</body>
+
+</html>
