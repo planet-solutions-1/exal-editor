@@ -137,9 +137,48 @@
                         class="w-full border border-gray-300 rounded p-2 text-sm focus:border-blue-500 outline-none"
                         placeholder="e.g. Class 10 Boys Bundle">
                 </div>
-                <div class="bg-blue-50 p-3 rounded text-xs text-blue-800 border border-blue-100">
-                    <p>Current Filters will be saved with this pattern.</p>
-                    <p class="mt-1 font-bold">Students: <span id="patternCountDisplay">0</span></p>
+                <div
+                    class="bg-blue-50 p-3 rounded text-xs text-blue-800 border border-blue-100 flex justify-between items-center">
+                    <div>
+                        <p>Items in Pattern: <span id="patternCountDisplay" class="font-bold">0</span> Students</p>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-xs font-semibold text-[#7F8C8D] uppercase mb-1">School Name</label>
+                        <input type="text" id="newPatternSchool"
+                            class="w-full border border-gray-300 rounded p-2 text-sm focus:border-blue-500 outline-none"
+                            placeholder="School Name">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-[#7F8C8D] uppercase mb-1">Consumption (M)</label>
+                        <input type="number" step="0.01" id="newPatternCons"
+                            class="w-full border border-gray-300 rounded p-2 text-sm focus:border-blue-500 outline-none"
+                            placeholder="0.00">
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-semibold text-[#7F8C8D] uppercase mb-1">Description</label>
+                    <textarea id="newPatternDesc" rows="2"
+                        class="w-full border border-gray-300 rounded p-2 text-sm focus:border-blue-500 outline-none"
+                        placeholder="Brief description..."></textarea>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-semibold text-[#7F8C8D] uppercase mb-1">Cloth Details</label>
+                    <input type="text" id="newPatternCloth"
+                        class="w-full border border-gray-300 rounded p-2 text-sm focus:border-blue-500 outline-none"
+                        placeholder="e.g. Cotton Mix">
+                </div>
+
+                <div>
+                    <label class="block text-xs font-semibold text-[#7F8C8D] uppercase mb-1">Special
+                        Requirements</label>
+                    <input type="text" id="newPatternReq"
+                        class="w-full border border-gray-300 rounded p-2 text-sm focus:border-blue-500 outline-none"
+                        placeholder="Optional...">
                 </div>
             </div>
             <div class="px-6 py-4 border-t border-[#E2E8F0] bg-[#F9F9F7] flex justify-end gap-3">
@@ -260,6 +299,26 @@
     <div
         class="bg-[#F8F9FA] border-b border-[#E2E8F0] px-6 py-2 flex items-center gap-4 overflow-x-auto whitespace-nowrap">
         <span class="text-xs font-bold text-gray-400 uppercase tracking-wider">Saved Patterns:</span>
+        <button onclick="exportAllPatternsSummary()"
+            class="text-xs bg-green-100 text-green-700 px-2 py-1 rounded border border-green-200 hover:bg-green-200 flex items-center gap-1">
+            <svg width="12" height="12" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                <polyline points="7 10 12 15 17 10" />
+                <line x1="12" y1="15" x2="12" y2="3" />
+            </svg>
+            Export Summary (XLSX)
+        </button>
+        <button onclick="exportAllPatternsSummaryPDF()"
+            class="text-xs bg-red-100 text-red-700 px-2 py-1 rounded border border-red-200 hover:bg-red-200 flex items-center gap-1">
+            <svg width="12" height="12" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                <polyline points="14 2 14 8 20 8"></polyline>
+                <line x1="16" y1="13" x2="8" y2="13"></line>
+                <line x1="16" y1="17" x2="8" y2="17"></line>
+                <polyline points="10 9 9 9 8 9"></polyline>
+            </svg>
+            Export Summary (PDF)
+        </button>
         <div id="patternList" class="flex gap-2">
             <!-- Patterns inserted here -->
             <span class="text-xs text-gray-400 italic py-1">No patterns created yet.</span>
@@ -282,14 +341,16 @@
             </div>
 
             <div class="flex flex-wrap gap-2 w-full sm:w-auto justify-center sm:justify-start">
-                <select id="filterClass" onchange="handleFilter()"
-                    class="text-sm border border-[#E2E8F0] rounded-md px-2 py-1.5 flex-1 sm:flex-none">
-                    <option value="">All Classes</option>
-                </select>
-                <select id="filterSection" onchange="handleFilter()"
-                    class="text-sm border border-[#E2E8F0] rounded-md px-2 py-1.5 flex-1 sm:flex-none">
-                    <option value="">All Sections</option>
-                </select>
+                <div class="relative group">
+                    <input list="listClass" id="filterClass" onchange="handleFilter()" placeholder="Class (e.g. 1-3)"
+                        class="text-sm border border-[#E2E8F0] rounded-md px-2 py-1.5 w-full sm:w-32 outline-none focus:border-[#4A5568]">
+                    <datalist id="listClass"></datalist>
+                </div>
+                <div class="relative group">
+                    <input list="listSection" id="filterSection" onchange="handleFilter()" placeholder="Sec (e.g. A,B)"
+                        class="text-sm border border-[#E2E8F0] rounded-md px-2 py-1.5 w-full sm:w-32 outline-none focus:border-[#4A5568]">
+                    <datalist id="listSection"></datalist>
+                </div>
                 <select id="filterHouse" onchange="handleFilter()"
                     class="text-sm border border-[#E2E8F0] rounded-md px-2 py-1.5 flex-1 sm:flex-none">
                     <option value="">All Houses</option>
@@ -521,16 +582,20 @@
 
         function populateFilters() {
             const getOpts = (key) => [...new Set(data.map(r => r[key]).filter(Boolean))].sort();
+            const updateDatalist = (id, opts) => {
+                const el = document.getElementById(id);
+                el.innerHTML = opts.map(o => `<option value="${o}">`).join('');
+            };
+
             const updateSelect = (id, opts, label) => {
                 const el = document.getElementById(id);
-                // Preserve value if possible, but usually we reset on new file
                 const currentVal = el.value;
                 el.innerHTML = `<option value="">${label}</option>` + opts.map(o => `<option value="${o}">${o}</option>`).join('');
                 if (opts.includes(currentVal)) el.value = currentVal;
             };
 
-            updateSelect('filterClass', getOpts('Class'), 'All Classes');
-            updateSelect('filterSection', getOpts('Section'), 'All Sections');
+            updateDatalist('listClass', getOpts('Class'));
+            updateDatalist('listSection', getOpts('Section'));
             updateSelect('filterHouse', getOpts('House'), 'All Houses');
             updateSelect('filterGender', getOpts('Gender'), 'All Genders');
 
@@ -600,12 +665,78 @@
             updateCount();
         }
 
+        function syncFiltersFromDOM() {
+            // 1. Sync Static Filters
+            filters.class = document.getElementById('filterClass').value;
+            filters.section = document.getElementById('filterSection').value;
+            filters.house = document.getElementById('filterHouse').value;
+            filters.gender = document.getElementById('filterGender').value;
+
+            // 2. Sync Dynamic Component Filters
+            // Don't rebuild them! Just read values from existing inputs.
+            const container = document.getElementById('dynamicFilters');
+            filters.components = {}; // Clear and rebuild based on DOM
+
+            // Only if item selected
+            const activeItem = document.getElementById('filterItem').value;
+            if (activeItem && activeItem === filters.item) {
+                const inputs = container.querySelectorAll('input');
+                inputs.forEach(input => {
+                    const col = input.getAttribute('placeholder');
+                    const val = input.value.trim();
+                    if (col && val) {
+                        filters.components[col] = val;
+                    }
+                });
+            }
+        }
+
+        // --- FILTER HELPERS ---
+        function checkFilterMatch(rowValue, filterInput, isNumeric = false) {
+            if (!filterInput) return true;
+            const parts = filterInput.split(',').map(s => s.trim());
+
+            // Check if rowValue matches ANY of the parts (OR logic between commas)
+            return parts.some(part => {
+                if (part.includes('-')) {
+                    const [start, end] = part.split('-').map(s => s.trim());
+                    if (isNumeric) {
+                        const val = parseFloat(rowValue);
+                        const sNum = parseFloat(start);
+                        const eNum = parseFloat(end);
+                        // Handle invalid numbers gracefully
+                        if (isNaN(val) || isNaN(sNum) || isNaN(eNum)) return false;
+                        return val >= sNum && val <= eNum;
+                    } else {
+                        // String range (lexicographical) - case insensitive
+                        const rVal = String(rowValue || "").toLowerCase();
+                        const sVal = start.toLowerCase();
+                        const eVal = end.toLowerCase();
+                        return rVal >= sVal && rVal <= eVal;
+                    }
+                } else {
+                    // Single value match
+                    if (isNumeric) {
+                        // Loose equality for numbers in strings (e.g. "5" == 5)
+                        // But for strict filtering, maybe exact?
+                        // Let's use string comparison for exact matches unless range
+                        return String(rowValue) == part;
+                    } else {
+                        // Exact string match (case-insensitive)
+                        return String(rowValue || "").toLowerCase() === part.toLowerCase();
+                    }
+                }
+            });
+        }
+
         function getFilteredData() {
             return data.filter(row => {
                 // 1. Basic Filters
                 const matchSearch = !filters.search || Object.values(row).some(v => String(v).toLowerCase().includes(filters.search));
-                const matchClass = !filters.class || row.Class == filters.class;
-                const matchSection = !filters.section || row.Section == filters.section;
+                // Use Helper Helper for Range Support
+                const matchClass = checkFilterMatch(row.Class, filters.class, true); // Treat class as potentially numeric (1-10)
+                const matchSection = checkFilterMatch(row.Section, filters.section, false);
+                // Keep House/Gender as exact (selects)
                 const matchHouse = !filters.house || row.House == filters.house;
                 const matchGender = !filters.gender || row.Gender == filters.gender;
 
@@ -626,17 +757,11 @@
                     Object.keys(filters.components).forEach(col => {
                         const filterVal = filters.components[col];
                         const rowVal = row[col];
-                        // Range e.g. "30-32"
-                        if (filterVal.includes('-')) {
-                            const [min, max] = filterVal.split('-').map(Number);
-                            if (!isNaN(min) && !isNaN(max)) {
-                                const valNum = parseFloat(rowVal);
-                                if (isNaN(valNum) || valNum < min || valNum > max) matchComp = false;
-                            } else {
-                                if (String(rowVal) !== filterVal) matchComp = false; // fallback
-                            }
-                        } else {
-                            if (String(rowVal) !== filterVal) matchComp = false;
+
+                        // Use the shared helper for robust range support (Numeric for measurements)
+                        // Measurements (U1-U8, L1 etc) are numeric.
+                        if (!checkFilterMatch(rowVal, filterVal, true)) {
+                            matchComp = false;
                         }
                     });
                 }
@@ -733,14 +858,28 @@
             const name = document.getElementById('newPatternName').value;
             if (!name) return alert("Enter a pattern name");
 
+            // Ensure filters are mutually synced with DOM inputs before saving
+            // In case user typed but didn't trigger 'change' or pressed Enter
+            syncFiltersFromDOM();
+
             // Capture Advanced Filters too
             const currentFilters = JSON.parse(JSON.stringify(filters));
+
+            // Capture Metadata
+            const meta = {
+                school: document.getElementById('newPatternSchool').value || "",
+                desc: document.getElementById('newPatternDesc').value || "",
+                consumption: document.getElementById('newPatternCons').value || "0",
+                cloth: document.getElementById('newPatternCloth').value || "",
+                req: document.getElementById('newPatternReq').value || ""
+            };
 
             const pattern = {
                 id: Date.now(),
                 name: name,
                 filters: currentFilters,
-                count: getFilteredData().length
+                count: getFilteredData().length,
+                metadata: meta // Store it
             };
 
             patterns.push(pattern);
@@ -794,17 +933,24 @@
             filters = JSON.parse(JSON.stringify(p.filters));
 
             // Restore Inputs
-            document.getElementById('searchInput').value = filters.search;
-            document.getElementById('filterClass').value = filters.class;
-            document.getElementById('filterSection').value = filters.section;
-            document.getElementById('filterHouse').value = filters.house;
-            document.getElementById('filterGender').value = filters.gender;
+            document.getElementById('searchInput').value = filters.search || "";
+            document.getElementById('filterClass').value = filters.class || "";
+            document.getElementById('filterSection').value = filters.section || "";
+            document.getElementById('filterHouse').value = filters.house || "";
+            document.getElementById('filterGender').value = filters.gender || "";
 
             // Restore Item Filters & Datalists
             document.getElementById('filterItem').value = filters.item;
 
+            // BACKUP COMPONENTS: handleItemFilter() will reset filters.components to {}
+            // We must save them to restore them after the DOM inputs are created.
+            const savedComponents = JSON.parse(JSON.stringify(filters.components || {}));
+
             // Re-trigger item filter rendering to show dyanmic controls
             handleItemFilter();
+
+            // RESTORE COMPONENTS: Put them back into state and DOM
+            filters.components = savedComponents;
 
             // Now restore the dynamic component values
             const container = document.getElementById('dynamicFilters');
@@ -868,11 +1014,23 @@
             const p = patterns.find(x => x.id === id);
 
             document.getElementById('metaPattern').value = p.name;
-            document.getElementById('exportFilters').textContent = p.name; // Simplified filter text
+            document.getElementById('exportFilters').textContent = p.name;
+
+            // Restore Metadata for Export Modal
+            if (p.metadata) {
+                document.getElementById('metaSchool').value = p.metadata.school || "";
+                document.getElementById('metaDesc').value = p.metadata.desc || "";
+                document.getElementById('metaConsumption').value = p.metadata.consumption || "";
+                document.getElementById('metaClothDetails').value = p.metadata.cloth || "";
+                document.getElementById('metaSpecialReq').value = p.metadata.req || "";
+            }
 
             // Must Ensure Data is Correct (Reload Filters quietly)
-            // Ideally we should cache the data keys, but reloading filters is safest for "what will be exported"
+            // Must Ensure Data is Correct (Reload Filters quietly)
+            // This ensures getFilteredData() uses this pattern's filters
             loadPattern(id);
+            // Force re-render just to be safe, though loadPattern does it
+            renderTable();
 
             document.getElementById('exportModal').classList.remove('hidden');
             updateExportTotal();
@@ -941,6 +1099,8 @@
             const wb = XLSX.utils.book_new();
             const filtered = getFilteredData();
 
+            // Prefer metadata from storage if available (when exporting via button), else from modal inputs?
+            // Actually, openExportForPattern loads inputs, so inputs are source of truth for THIS export.
             const school = document.getElementById('metaSchool').value;
             const code = document.getElementById('metaPattern').value;
             const desc = document.getElementById('metaDesc').value;
@@ -948,11 +1108,10 @@
             const req = document.getElementById('metaSpecialReq').value;
             const totalCloth = document.getElementById('exportTotalCloth').textContent;
 
-
-
             const activeItemName = filters.item;
             const itemHeaders = activeItemName ? [activeItemName, "Quantity"] : [];
 
+            // ... (Rest of export logic same)
             const wsData = [
                 ["PATTERN GROUP EXPORT"],
                 ["Pattern Code", code],
@@ -985,6 +1144,88 @@
             XLSX.utils.book_append_sheet(wb, ws, "Pattern");
             XLSX.writeFile(wb, `Pattern_${code}.xlsx`);
             closeExportModal();
+        }
+
+        function exportAllPatternsSummary() {
+            if (patterns.length === 0) return alert("No patterns to export.");
+
+            const wb = XLSX.utils.book_new();
+            const wsData = [
+                ["Pattern Name", "School", "Description", "Cloth Details", "Special Req", "Item Type", "M/Student", "Students", "Total Cloth (M)"]
+            ];
+
+            patterns.forEach(p => {
+                const m = p.metadata || {};
+                const cons = parseFloat(m.consumption) || 0;
+                const totalCloth = (cons * p.count).toFixed(2);
+
+                wsData.push([
+                    p.name,
+                    m.school || "",
+                    m.desc || "",
+                    m.cloth || "",
+                    m.req || "",
+                    p.filters.item || "Mixed",
+                    cons,
+                    p.count,
+                    totalCloth
+                ]);
+            });
+
+            const ws = XLSX.utils.aoa_to_sheet(wsData);
+            // Auto-width
+            const wscols = wsData[0].map(() => ({ wch: 20 }));
+            ws['!cols'] = wscols;
+
+            XLSX.utils.book_append_sheet(wb, ws, "All Patterns Summary");
+            XLSX.writeFile(wb, "All_Patterns_Summary.xlsx");
+        }
+
+        function exportAllPatternsSummaryPDF() {
+            if (patterns.length === 0) return alert("No patterns to export.");
+
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF({ orientation: 'landscape' });
+
+            doc.setFontSize(16);
+            doc.text("All Patterns Summary", 14, 15);
+            doc.setFontSize(10);
+            doc.text(`Generated: ${new Date().toLocaleDateString()}`, 14, 22);
+
+            const headers = [["Pattern Name", "School", "Desc", "Cloth Details", "Special Req", "M/Student", "Students", "Total Cloth (M)", "Values"]];
+            const rows = patterns.map(p => {
+                const m = p.metadata || {};
+                const cons = parseFloat(m.consumption) || 0;
+                const totalCloth = (cons * p.count).toFixed(2);
+
+                // Construct a summary of filters for the "Values" column
+                let filterSummary = [];
+                if (p.filters.class) filterSummary.push(`Cl: ${p.filters.class}`);
+                if (p.filters.section) filterSummary.push(`Sec: ${p.filters.section}`);
+                if (p.filters.item) filterSummary.push(p.filters.item);
+
+                return [
+                    p.name,
+                    m.school || "-",
+                    m.desc || "-",
+                    m.cloth || "-",
+                    m.req || "-",
+                    cons.toFixed(2),
+                    p.count,
+                    totalCloth,
+                    filterSummary.join(', ')
+                ];
+            });
+
+            doc.autoTable({
+                head: headers,
+                body: rows,
+                startY: 25,
+                styles: { fontSize: 9 },
+                headStyles: { fillColor: [44, 62, 80] }
+            });
+
+            doc.save("All_Patterns_Summary.pdf");
         }
 
     </script>
