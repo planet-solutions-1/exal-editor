@@ -299,6 +299,14 @@
     <div
         class="bg-[#F8F9FA] border-b border-[#E2E8F0] px-6 py-2 flex items-center gap-4 overflow-x-auto whitespace-nowrap">
         <span class="text-xs font-bold text-gray-400 uppercase tracking-wider">Saved Patterns:</span>
+        <button onclick="openTrashModal()" title="Recycle Bin"
+            class="text-xs bg-gray-100 text-gray-600 px-2 py-1 rounded border border-gray-200 hover:bg-gray-200 flex items-center gap-1">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <polyline points="3 6 5 6 21 6"></polyline>
+                <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+            </svg>
+            Trash (<span id="trashCount">0</span>)
+        </button>
         <button onclick="exportAllPatternsSummary()"
             class="text-xs bg-green-100 text-green-700 px-2 py-1 rounded border border-green-200 hover:bg-green-200 flex items-center gap-1">
             <svg width="12" height="12" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -317,11 +325,77 @@
                 <line x1="16" y1="17" x2="8" y2="17"></line>
                 <polyline points="10 9 9 9 8 9"></polyline>
             </svg>
-            Export Summary (PDF)
+            Summary (PDF)
         </button>
+        <div class="h-6 w-px bg-gray-300 mx-1"></div>
+        <button onclick="exportPackingListExcel()" title="Export Packing List (All Patterns)"
+            class="text-xs bg-purple-100 text-purple-700 px-2 py-1 rounded border border-purple-200 hover:bg-purple-200 flex items-center gap-1">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                <polyline points="7 10 12 15 17 10" />
+                <line x1="12" y1="15" x2="12" y2="3" />
+            </svg>
+            Packing (XLS)
+        </button>
+        <button onclick="exportPackingListPDF()" title="Export Packing List (All Patterns)"
+            class="text-xs bg-purple-100 text-purple-700 px-2 py-1 rounded border border-purple-200 hover:bg-purple-200 flex items-center gap-1">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                <polyline points="14 2 14 8 20 8" />
+                <line x1="16" y1="13" x2="8" y2="13" />
+                <line x1="16" y1="17" x2="8" y2="17" />
+                <polyline points="10 9 9 9 8 9" />
+            </svg>
+            Packing (PDF)
+        </button>
+
         <div id="patternList" class="flex gap-2">
             <!-- Patterns inserted here -->
             <span class="text-xs text-gray-400 italic py-1">No patterns created yet.</span>
+        </div>
+    </div>
+
+    <!-- Trash Modal -->
+    <div id="trashModal"
+        class="fixed inset-0 bg-black/50 z-50 hidden flex items-center justify-center backdrop-blur-sm p-4">
+        <div
+            class="bg-white rounded-lg shadow-xl w-[95%] sm:w-full max-w-lg flex flex-col max-h-[80vh] animate-in fade-in zoom-in duration-200">
+            <div class="px-6 py-4 border-b border-[#E2E8F0] bg-[#F9F9F7] flex justify-between items-center">
+                <h3 class="font-bold text-[#2C3E50] text-lg flex items-center gap-2">
+                    <svg width="20" height="20" class="text-red-500" viewBox="0 0 24 24" fill="none"
+                        stroke="currentColor" stroke-width="2">
+                        <polyline points="3 6 5 6 21 6"></polyline>
+                        <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                    </svg>
+                    Trash Bin
+                </h3>
+                <button onclick="closeTrashModal()" class="text-gray-400 hover:text-gray-600">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <line x1="18" y1="6" x2="6" y2="18"></line>
+                        <line x1="6" y1="6" x2="18" y2="18"></line>
+                    </svg>
+                </button>
+            </div>
+            <div class="p-0 overflow-y-auto flex-1 bg-gray-50/50">
+                <div id="trashList" class="divide-y divide-gray-100">
+                    <!-- Trash Items -->
+                </div>
+                <div id="emptyTrashMsg" class="hidden p-8 text-center text-gray-400">
+                    <p>Trash is empty.</p>
+                </div>
+            </div>
+            <div class="px-6 py-4 border-t border-[#E2E8F0] bg-gray-50 flex justify-between">
+                <button onclick="emptyTrash()"
+                    class="text-red-600 hover:text-red-800 text-sm font-bold flex items-center gap-1">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path
+                            d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2M10 11v6M14 11v6" />
+                    </svg>
+                    Empty Trash
+                </button>
+                <button onclick="closeTrashModal()"
+                    class="px-4 py-2 bg-white border border-gray-300 rounded text-sm font-medium text-gray-700 hover:bg-gray-50">Close</button>
+            </div>
         </div>
     </div>
 
@@ -623,8 +697,18 @@
         function renderPresetDropdown() {
             const sel = document.getElementById('presetSelect');
             if (!sel) return;
+
+            // Filter by Active Item
+            const activeItem = document.getElementById('filterItem') ? document.getElementById('filterItem').value : "";
+
+            // Show all if no item selected, OR if preset matches item
+            const visiblePresets = presets.filter(p => {
+                if (!activeItem) return true; // Show all if global filter is empty
+                return p.filters.item === activeItem;
+            });
+
             sel.innerHTML = '<option value="">Select Preset...</option>';
-            presets.forEach(p => {
+            visiblePresets.forEach(p => {
                 const opt = document.createElement('option');
                 opt.value = p.name;
                 opt.textContent = p.name;
@@ -721,6 +805,7 @@
         // Init Presets on Load
         document.addEventListener('DOMContentLoaded', () => {
             loadPresets();
+            loadTrash();
         });
 
         function populateFilters() {
@@ -763,6 +848,10 @@
             const itemName = document.getElementById('filterItem').value;
             filters.item = itemName;
             filters.components = {};
+
+            // Refresh Presets Dropdown to show only relevant ones
+            renderPresetDropdown();
+
             const container = document.getElementById('dynamicFilters');
             container.innerHTML = '';
 
@@ -1404,6 +1493,232 @@
                 // Always restore global state
                 filters = backupFilters;
             }
+        }
+
+        // --- TRASH SYSTEM ---
+        let trashPatterns = [];
+        const TRASH_STORAGE_KEY = 'exal_trash_patterns';
+
+        function loadTrash() {
+            try {
+                const stored = localStorage.getItem(TRASH_STORAGE_KEY);
+                if (stored) trashPatterns = JSON.parse(stored);
+            } catch (e) { console.error("Trash load error", e); }
+            updateTrashCount();
+        }
+
+        function updateTrashCount() {
+            const el = document.getElementById('trashCount');
+            if (el) el.textContent = trashPatterns.length;
+        }
+
+        function saveTrash() {
+            localStorage.setItem(TRASH_STORAGE_KEY, JSON.stringify(trashPatterns));
+            updateTrashCount();
+        }
+
+        function deletePattern(id) {
+            // Find by ID now, not index
+            const index = patterns.findIndex(p => p.id === id);
+            if (index === -1) return;
+
+            if (!confirm("Move pattern to Trash?")) return;
+            const p = patterns[index];
+            trashPatterns.push(p);
+            patterns.splice(index, 1);
+            saveToLocal();
+            saveTrash();
+            renderModules(); // Re-render list
+        }
+
+        function openTrashModal() {
+            const modal = document.getElementById('trashModal');
+            const list = document.getElementById('trashList');
+            const msg = document.getElementById('emptyTrashMsg');
+
+            list.innerHTML = '';
+            if (trashPatterns.length === 0) {
+                msg.classList.remove('hidden');
+            } else {
+                msg.classList.add('hidden');
+                trashPatterns.forEach((p, i) => {
+                    const div = document.createElement('div');
+                    div.className = "flex items-center justify-between p-3 bg-white hover:bg-gray-50 group border-b border-gray-100 last:border-0";
+                    div.innerHTML = `
+                        <div class="flex flex-col">
+                            <span class="font-bold text-gray-700 text-sm">${p.name}</span>
+                            <span class="text-xs text-gray-400">Items: ${p.count || 0}</span>
+                        </div>
+                        <div class="flex items-center gap-2">
+                             <button onclick="restorePattern(${i})" title="Restore" class="text-green-500 hover:text-green-700 p-1.5 rounded bg-green-50 hover:bg-green-100 transition-colors">
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="1 4 1 10 7 10"></polyline><polyline points="23 20 23 14 17 14"></polyline><path d="M20.49 9A9 9 0 0 0 5.64 5.64L1 10m22 4l-4.64 4.36A9 9 0 0 1 3.51 15"></path></svg>
+                            </button>
+                             <button onclick="permanentDelete(${i})" title="Delete Forever" class="text-red-400 hover:text-red-700 p-1.5 rounded bg-red-50 hover:bg-red-100 transition-colors">
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6L6 18M6 6l12 12"></path></svg>
+                            </button>
+                        </div>
+                    `;
+                    list.appendChild(div);
+                });
+            }
+            modal.classList.remove('hidden');
+        }
+
+        function closeTrashModal() {
+            document.getElementById('trashModal').classList.add('hidden');
+        }
+
+        function restorePattern(i) {
+            const p = trashPatterns[i];
+            patterns.push(p);
+            trashPatterns.splice(i, 1);
+            saveToLocal();
+            saveTrash();
+            renderModules();
+            openTrashModal(); // Refresh modal
+        }
+
+        function permanentDelete(i) {
+            if (!confirm("Delete forever? This logic cannot be undone.")) return;
+            trashPatterns.splice(i, 1);
+            saveTrash();
+            openTrashModal();
+        }
+
+        function emptyTrash() {
+            if (!confirm(`Empty Trash? All ${trashPatterns.length} patterns will be lost forever.`)) return;
+            trashPatterns = [];
+            saveTrash();
+            openTrashModal();
+        }
+
+        // --- PACKING LIST EXPORT ---
+
+        function getPackingListData() {
+            // Aggregate all students from all patterns
+            let allRows = [];
+            const backupFilters = filters; // Backup global state
+
+            try {
+                patterns.forEach(p => {
+                    // Temporarily Apply Filters
+                    filters = p.filters;
+                    const pRows = getFilteredData();
+                    const item = allItems.find(i => i.name === p.filters.item);
+
+                    pRows.forEach(r => {
+                        let qty = 1;
+                        if (item && r[`Qty_${item.name}`]) {
+                            const q = parseInt(r[`Qty_${item.name}`]);
+                            if (!isNaN(q)) qty = q;
+                        }
+
+                        // Create Simplified Row
+                        allRows.push({
+                            "Student Name": r["Student Name"],
+                            "School": p.metadata?.school || "",
+                            "Class": r["Class"],
+                            "Section": r["Section"],
+                            "Pattern Name": p.name,
+                            "Gender": r["Gender"],
+                            "House": r["House"] || "",
+                            "Description": p.metadata?.desc || "",
+                            "Quantity": qty,
+                            // New Fields
+                            "Roll No": r["Roll No"] || "",
+                            "Admission No": r["Admission No"] || r["Adm No"] || "",
+                            // Internal sort keys
+                            _clsRank: getClassRank(r["Class"]),
+                            _sec: r["Section"],
+                            _name: r["Student Name"]
+                        });
+                    });
+                });
+            } finally {
+                filters = backupFilters; // Restore
+            }
+
+            // Sort by Class -> Section -> Name
+            allRows.sort((a, b) => {
+                if (a._clsRank !== b._clsRank) return a._clsRank - b._clsRank;
+                if (a._sec !== b._sec) return a._sec.localeCompare(b._sec);
+                return a._name.localeCompare(b._name);
+            });
+
+            return allRows;
+        }
+
+        function exportPackingListExcel() {
+            if (patterns.length === 0) return alert("No patterns to export.");
+
+            const rows = getPackingListData();
+            const wb = XLSX.utils.book_new();
+            const wsData = [
+                ["PACKING LIST REPORT"],
+                [`Generated: ${new Date().toLocaleDateString()}`],
+                [],
+                ["Roll No", "Admission No", "Student Name", "School", "Class", "Section", "Pattern Name", "Gender", "House", "Description", "Quantity"]
+            ];
+
+            rows.forEach(r => {
+                wsData.push([
+                    r["Roll No"],
+                    r["Admission No"],
+                    r["Student Name"],
+                    r["School"],
+                    r["Class"],
+                    r["Section"],
+                    r["Pattern Name"],
+                    r["Gender"],
+                    r["House"],
+                    r["Description"],
+                    r["Quantity"]
+                ]);
+            });
+
+            const ws = XLSX.utils.aoa_to_sheet(wsData);
+            // Widths
+            ws['!cols'] = [{ wch: 10 }, { wch: 15 }, { wch: 25 }, { wch: 20 }, { wch: 10 }, { wch: 10 }, { wch: 25 }, { wch: 10 }, { wch: 15 }, { wch: 20 }, { wch: 10 }];
+
+            XLSX.utils.book_append_sheet(wb, ws, "Packing List");
+            XLSX.writeFile(wb, "Packing_List.xlsx");
+        }
+
+        async function exportPackingListPDF() {
+            if (patterns.length === 0) return alert("No patterns to export.");
+
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF({ orientation: 'landscape' });
+            const rows = getPackingListData();
+
+            doc.setFontSize(16);
+            doc.text("Packing List Report", 14, 15);
+            doc.setFontSize(10);
+            doc.text(`Generated: ${new Date().toLocaleDateString()} | Total Items: ${rows.length}`, 14, 22);
+
+            const tableRows = rows.map(r => [
+                r["Roll No"],
+                r["Admission No"],
+                r["Student Name"],
+                r["School"],
+                r["Class"],
+                r["Section"],
+                r["Pattern Name"],
+                r["Gender"],
+                // r["House"], // Optional: Hide House if space is tight, or keep it
+                // r["Description"], // Keep essential fields
+                r["Quantity"]
+            ]);
+
+            doc.autoTable({
+                head: [["Roll", "Adm No", "Name", "School", "Class", "Sec", "Pattern", "Gen", "Qty"]],
+                body: tableRows,
+                startY: 28,
+                styles: { fontSize: 9 },
+                headStyles: { fillColor: [44, 62, 80] }
+            });
+
+            doc.save("Packing_List.pdf");
         }
 
         function exportAllPatternsSummary() {
