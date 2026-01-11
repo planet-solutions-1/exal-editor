@@ -374,6 +374,31 @@
 
             <div class="h-px w-full sm:h-6 sm:w-px bg-gray-300 mx-2 hidden sm:block"></div>
 
+            <!-- Filter Presets Group -->
+            <div class="flex items-center gap-2">
+                <select id="presetSelect" onchange="//applyPreset(this.value)"
+                    class="text-sm border border-[#E2E8F0] rounded-md px-2 py-1.5 w-32 outline-none focus:border-[#4A5568]">
+                    <option value="">Select Preset...</option>
+                </select>
+                <button onclick="saveCurrentAsPreset()" title="Save current filters as preset"
+                    class="p-1.5 text-blue-600 hover:bg-blue-50 rounded">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path>
+                        <polyline points="17 21 17 13 7 13 7 21"></polyline>
+                        <polyline points="7 3 7 8 15 8"></polyline>
+                    </svg>
+                </button>
+                <button onclick="managePresets()" title="Manage Saved Presets"
+                    class="p-1.5 text-gray-500 hover:bg-gray-100 rounded">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <polyline points="3 6 5 6 21 6"></polyline>
+                        <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                    </svg>
+                </button>
+            </div>
+
+            <div class="h-px w-full sm:h-6 sm:w-px bg-gray-300 mx-2 hidden sm:block"></div>
+
             <div class="flex gap-2 w-full sm:w-auto justify-center sm:justify-start">
                 <button onclick="resetView()"
                     class="text-gray-500 hover:text-gray-800 text-xs font-bold uppercase mx-2 whitespace-nowrap"
@@ -579,6 +604,124 @@
             }
             saveToLocal(); // Save new data
         }
+
+
+        // --- PRESET SYSTEM ---
+        let presets = [];
+        const PRESET_STORAGE_KEY = 'exal_filter_presets';
+
+        function loadPresets() {
+            try {
+                const stored = localStorage.getItem(PRESET_STORAGE_KEY);
+                if (stored) {
+                    presets = JSON.parse(stored);
+                }
+            } catch (e) { console.error("Failed to load presets", e); }
+            renderPresetDropdown();
+        }
+
+        function renderPresetDropdown() {
+            const sel = document.getElementById('presetSelect');
+            if (!sel) return;
+            sel.innerHTML = '<option value="">Select Preset...</option>';
+            presets.forEach(p => {
+                const opt = document.createElement('option');
+                opt.value = p.name;
+                opt.textContent = p.name;
+                sel.appendChild(opt);
+            });
+            sel.onchange = (e) => applyPreset(e.target.value);
+        }
+
+        function saveCurrentAsPreset() {
+            // syncFiltersFromDOM(); // Ensure up to date (Assuming handleFilter updates 'filters')
+            // Actually handleFilter updates 'filters'.
+            const name = prompt("Enter a name for this filter preset:");
+            if (!name) return;
+
+            // Check duplicate
+            const existing = presets.findIndex(p => p.name === name);
+            // Deep copy filters
+            const newPreset = { name: name, filters: JSON.parse(JSON.stringify(filters)) };
+
+            if (existing !== -1) {
+                if (!confirm(`Preset "${name}" already exists. Overwrite?`)) return;
+                presets[existing] = newPreset;
+            } else {
+                presets.push(newPreset);
+            }
+
+            localStorage.setItem(PRESET_STORAGE_KEY, JSON.stringify(presets));
+            renderPresetDropdown();
+            // Select the newly created one
+            setTimeout(() => { document.getElementById('presetSelect').value = name; }, 50);
+            alert("Preset Saved!");
+        }
+
+        function applyPreset(name) {
+            if (!name) return;
+            const p = presets.find(x => x.name === name);
+            if (!p) return;
+
+            // Restore Logic
+            filters = JSON.parse(JSON.stringify(p.filters));
+
+            // Update DOM Elements
+            const setVal = (id, val) => { const el = document.getElementById(id); if (el) el.value = val || ""; };
+            setVal('searchInput', filters.search);
+            setVal('filterClass', filters.class);
+            setVal('filterSection', filters.section);
+            setVal('filterHouse', filters.house);
+            setVal('filterGender', filters.gender);
+            setVal('filterItem', filters.item);
+
+            // BACKUP COMPONENTS map to prevent handleItemFilter from wiping them
+            const savedComponents = JSON.parse(JSON.stringify(filters.components || {}));
+
+            // Re-trigger item filter rendering (clears dynamic inputs)
+            handleItemFilter();
+
+            // RESTORE COMPONENTS
+            filters.components = savedComponents;
+            const container = document.getElementById('dynamicFilters');
+            if (filters.components && container) {
+                Array.from(container.children).forEach(wrapper => {
+                    const input = wrapper.querySelector('input');
+                    if (input && filters.components[input.placeholder]) {
+                        input.value = filters.components[input.placeholder];
+                    }
+                });
+            }
+
+            renderTable();
+            updateCount();
+        }
+
+        function managePresets() {
+            if (presets.length === 0) return alert("No saved presets to manage.");
+
+            const names = presets.map((p, i) => `${i + 1}. ${p.name}`).join('\n');
+            const choice = prompt(`Saved Presets:\n${names}\n\nEnter number to DELETE, or Cancel.`);
+            if (!choice) return;
+
+            const idx = parseInt(choice) - 1;
+            if (idx >= 0 && idx < presets.length) {
+                const p = presets[idx];
+                if (confirm(`Delete preset "${p.name}"?`)) {
+                    presets.splice(idx, 1);
+                    localStorage.setItem(PRESET_STORAGE_KEY, JSON.stringify(presets));
+                    renderPresetDropdown();
+                    alert("Deleted.");
+                }
+            } else {
+                alert("Invalid selection.");
+            }
+        }
+
+        // Init Presets on Load
+        document.addEventListener('DOMContentLoaded', () => {
+            loadPresets();
+        });
 
         function populateFilters() {
             const getOpts = (key) => [...new Set(data.map(r => r[key]).filter(Boolean))].sort();
