@@ -240,13 +240,23 @@
                 <div class="flex-1"></div>
 
                 <div class="flex items-center gap-2">
+                    <!-- Quick Assign (Old Way) -->
                     <select id="assignDressSelect"
-                        class="text-sm border border-[#E2E8F0] rounded-md px-2 py-1.5 bg-white w-48">
-                        <option value="">Select Dress to Assign...</option>
+                        class="text-sm border border-[#E2E8F0] rounded-md px-2 py-1.5 bg-white w-32">
+                        <option value="">Select Dress...</option>
                     </select>
-                    <button onclick="assignDressToFiltered()" id="btnAssignSelected"
-                        class="btn-primary px-4 py-1.5 rounded-md text-sm font-bold shadow-sm whitespace-nowrap">
-                        Assign to Selected
+                    <button onclick="assignDressQuick()" id="btnAssignQuick"
+                        class="btn-primary px-3 py-1.5 rounded-md text-sm font-bold shadow-sm whitespace-nowrap"
+                        title="Assign 1 item to selected students immediately">
+                        Assign
+                    </button>
+
+                    <div class="h-6 w-px bg-gray-300 mx-1"></div>
+
+                    <!-- Quantity Assign (New Way) -->
+                    <button onclick="openAssignmentModal()"
+                        class="px-3 py-1.5 rounded-md text-sm font-bold text-blue-600 bg-blue-50 border border-blue-200 hover:bg-blue-100 whitespace-nowrap">
+                        Assign w/ Qty...
                     </button>
                 </div>
             </div>
@@ -312,6 +322,14 @@
                             <span id="scopeFilterSummary" class="text-[10px] text-gray-400 hidden">All data
                                 included</span>
                         </div>
+                        <button onclick="openManualGroupModal()"
+                            class="px-4 py-2 rounded text-sm font-bold bg-white border border-gray-300 hover:bg-gray-50 text-gray-700 shadow-sm flex items-center gap-2">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                stroke-width="2">
+                                <path d="M12 5v14M5 12h14" />
+                            </svg>
+                            Manual Create
+                        </button>
                         <button onclick="runAutoGrouping()"
                             class="btn-action px-4 py-2 rounded text-sm font-bold shadow flex items-center gap-2">
                             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
@@ -757,7 +775,11 @@
         }
 
         // --- TABS ---
+        // --- TABS ---
         function switchTab(tabId) {
+            // Persist Tab
+            sessionStorage.setItem('activeTab', tabId);
+
             ['config', 'data', 'groups', 'reports', 'analysis'].forEach(t => {
                 const btn = document.getElementById(`tab-${t}`);
                 const view = document.getElementById(`view-${t}`);
@@ -948,11 +970,19 @@
         }
 
         function updateDressDropdowns() {
-            const sel = document.getElementById('assignDressSelect');
-            if (sel) {
-                sel.innerHTML = `<option value="">Select Dress to Assign...</option>` +
-                    state.dresses.map(d => `<option value="${d.id}">${d.name}</option>`).join('');
-            }
+            const list = state.dresses.map(d => `<option value="${d.id}">${d.name}</option>`).join('');
+
+            // 1. Toolbar Select
+            const sel1 = document.getElementById('assignDressSelect');
+            if (sel1) sel1.innerHTML = `<option value="">Select Dress...</option>` + list;
+
+            // 2. Modal Select
+            const sel2 = document.getElementById('modalAssignDress');
+            if (sel2) sel2.innerHTML = `<option value="">Select Dress...</option>` + list;
+
+            // 3. Manual Group Select
+            const sel3 = document.getElementById('manualGroupDress');
+            if (sel3) sel3.innerHTML = `<option value="">Select Dress...</option>` + list;
         }
 
         // --- FILTER & RENDER LOGIC ---
@@ -1029,10 +1059,13 @@
         }
 
         function updateAssignButton() {
-            const btn = document.getElementById('btnAssignSelected');
-            if (btn) {
-                const count = selectedStudentIds.size;
-                btn.innerText = count > 0 ? `Assign to Selected (${count})` : 'Assign to Selected';
+            const btn = document.getElementById('btnAssignQuick');
+            function updateAssignButton() {
+                const btn = document.getElementById('btnAssignQuick');
+                if (btn) {
+                    const count = selectedStudentIds.size;
+                    btn.innerText = count > 0 ? `Assign to ${count}` : 'Assign';
+                }
             }
         }
 
@@ -1107,10 +1140,12 @@
                         if (!d) return;
 
                         // Dress Pill
+                        const qtyBadge = a.quantity > 1 ? `<span class="bg-blue-600 text-white text-[9px] px-1 rounded-full">${a.quantity}</span>` : '';
+
                         dressCellHtml += `
                             <div class="h-7 mb-1 flex items-center">
                                 <span class="bg-blue-50 text-blue-700 px-2 py-0.5 rounded text-[10px] font-bold border border-blue-200 inline-flex items-center gap-1 w-max">
-                                    ${d.name}
+                                    ${d.name} ${qtyBadge}
                                     <button onclick="removeAssignment('${s.id}', '${d.id}')" class="hover:text-red-500 font-black text-gray-400 leading-none ml-1">&times;</button>
                                 </span>
                             </div>`;
@@ -1642,11 +1677,20 @@
                 doc.text(`Fabric: ${g.meta.fabric || '-'} | Notes: ${g.meta.notes || '-'}`, margin, y);
                 y += 8;
 
-                const headers = ["Roll", "Name", "Class", ...(dress ? dress.cols : [])];
+                const headers = ["Roll", "Name", "Class", "Qty", ...(dress ? dress.cols : [])];
                 const rows = g.studentIds.map(sid => {
                     const s = state.students.find(st => st.id === sid);
                     if (!s) return [];
-                    return [s.Roll, s.Name, `${s.Class} ${s.Section}`, ...(dress ? dress.cols.map(c => s[c]) : [])];
+
+                    // Lookup Quantity
+                    let qty = 1;
+                    const assigns = state.assignments[sid];
+                    if (assigns && Array.isArray(assigns)) {
+                        const match = assigns.find(a => a.dressId == g.dressId);
+                        if (match && match.quantity) qty = match.quantity;
+                    }
+
+                    return [s.Roll, s.Name, `${s.Class} ${s.Section}`, qty, ...(dress ? dress.cols.map(c => s[c]) : [])];
                 });
 
                 doc.autoTable({
@@ -1796,6 +1840,8 @@
             if (!g) return;
             const dress = state.dresses.find(d => d.id == g.dressId);
             if (!dress) return;
+
+            pushHistory(); // Capture state BEFORE modification
 
             // Gather Inputs (Loose)
             const targetClass = String(document.getElementById('gdEditClass').value).trim().toLowerCase();
@@ -2037,6 +2083,7 @@
         function saveGroupDetailsFromModal() {
             const g = state.groups.find(grp => grp.id === currentGroupId);
             if (g) {
+                pushHistory();
                 g.meta.fabric = document.getElementById('gdFabric').value;
                 g.meta.notes = document.getElementById('gdNotes').value;
                 saveSystem();
@@ -2047,9 +2094,11 @@
         }
 
         // Init
+        // Init
         window.addEventListener('DOMContentLoaded', () => {
             loadSystem();
-            switchTab('config');
+            const lastTab = sessionStorage.getItem('activeTab') || 'config';
+            switchTab(lastTab);
         });
     </script>
     <!-- Group Detail Modal -->
@@ -2171,6 +2220,343 @@
         </div>
     </div>
 
+    <!-- ASSIGNMENT MODAL -->
+    <div id="assignmentModal"
+        class="hidden fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4 backdrop-blur-sm">
+        <div class="bg-white rounded-lg shadow-xl w-full max-w-md animate-in fade-in zoom-in duration-200">
+            <div class="p-5 border-b border-[#E2E8F0] bg-[#F9F9F7] flex justify-between items-center">
+                <h3 class="font-bold text-[#2C3E50] text-lg">Assign Dress</h3>
+                <button onclick="closeAssignmentModal()" class="text-gray-400 hover:text-gray-600">×</button>
+            </div>
+            <div class="p-6 space-y-4">
+                <div>
+                    <label class="block text-xs font-bold text-[#7F8C8D] uppercase mb-1">Select Dress</label>
+                    <select id="modalAssignDress"
+                        class="w-full border border-[#E2E8F0] rounded p-2 text-sm focus:border-blue-500 outline-none">
+                        <!-- Populated by JS -->
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-[#7F8C8D] uppercase mb-1">Quantity</label>
+                    <input type="number" id="modalAssignQty" value="1" min="1"
+                        class="w-full border border-[#E2E8F0] rounded p-2 text-sm focus:border-blue-500 outline-none">
+                </div>
+                <div class="bg-blue-50 p-3 rounded border border-blue-100 text-xs text-blue-700">
+                    Applying to: <span id="modalAssignCount" class="font-bold">0 students</span>
+                </div>
+            </div>
+            <div class="p-4 bg-[#F9F9F7] border-t border-[#E2E8F0] flex justify-end gap-3">
+                <button onclick="closeAssignmentModal()" class="btn-outline px-4 py-2 rounded text-sm">Cancel</button>
+                <button onclick="confirmAssignment()"
+                    class="btn-action px-4 py-2 rounded text-sm font-bold shadow-sm">Confirm Assignment</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // --- ASSIGNMENT LOGIC ---
+
+        // 1. Quick Assign (Old Way)
+        function assignDressQuick() {
+            const dressId = document.getElementById('assignDressSelect').value;
+            if (!dressId) return alert("Please select a dress from the dropdown first.");
+            if (selectedStudentIds.size === 0) return alert("No students selected.");
+
+            pushHistory();
+
+            selectedStudentIds.forEach(sid => {
+                let current = state.assignments[sid] || [];
+                if (!Array.isArray(current)) current = [current];
+
+                // Append if not exact duplicate (allow multiple same dress? User usually wants 1 per type unless specified)
+                // For Quick Assign, let's assume if they have it, we ADD another? Or ignore?
+                // Standard behavior: Add.
+                // But let's check duplicates for safety to prevent double-click accidents?
+                // "Old Way" didn't have Qty, so it implied "Have/Not Have".
+                // Let's safe-guard: If they have this dress id, DO NOTHING?
+                // Or user might want 2 shirts.
+                // Let's add it.
+
+                // Consistency check: Remove EXACT dressId match first if we want 'Update' behavior?
+                // Let's do: Add new entry.
+                current.push({ dressId, quantity: 1, assignedAt: Date.now() });
+                state.assignments[sid] = current;
+            });
+
+            saveSystem();
+            renderStudentTable();
+            alert(`Quick Assigned to ${selectedStudentIds.size} students.`);
+        }
+
+        // 2. Modal Logic (New Way)
+        function openAssignmentModal() {
+            if (selectedStudentIds.size === 0) return alert("Please select at least one student first.");
+            updateDressDropdowns();
+            document.getElementById('modalAssignCount').innerText = `${selectedStudentIds.size} students`;
+            document.getElementById('modalAssignQty').value = 1;
+            document.getElementById('assignmentModal').classList.remove('hidden');
+        }
+
+        function closeAssignmentModal() {
+            document.getElementById('assignmentModal').classList.add('hidden');
+        }
+
+        function confirmAssignment() {
+            const dressId = document.getElementById('modalAssignDress').value;
+            const qty = parseInt(document.getElementById('modalAssignQty').value);
+
+            if (!dressId) return alert("Please select a dress.");
+            if (isNaN(qty) || qty < 1) return alert("Invalid quantity.");
+
+            pushHistory();
+
+            selectedStudentIds.forEach(sid => {
+                let current = state.assignments[sid] || [];
+                if (!Array.isArray(current)) current = [current];
+
+                // Check if already assigned
+                if (current.some(a => a.dressId === dressId)) {
+                    current = current.filter(a => a.dressId !== dressId);
+                }
+
+                current.push({ dressId, quantity: qty, assignedAt: Date.now() });
+                state.assignments[sid] = current;
+            });
+
+            saveSystem();
+            renderStudentTable();
+            closeAssignmentModal();
+            alert(`Assigned to ${selectedStudentIds.size} students!`);
+        }
+
+        // Placeholder for updateDressDropdowns - assuming it exists elsewhere or will be defined
+        // This function needs to populate the 'manualGroupDress' select element
+        function updateDressDropdowns() {
+            const modalAssignDressSelect = document.getElementById('modalAssignDress');
+            const manualGroupDressSelect = document.getElementById('manualGroupDress'); // New dropdown
+
+            // Clear existing options
+            modalAssignDressSelect.innerHTML = '';
+            manualGroupDressSelect.innerHTML = '';
+
+            // Add a default "Select Dress" option for both
+            const defaultOption1 = document.createElement('option');
+            defaultOption1.value = '';
+            defaultOption1.textContent = 'Select Dress';
+            modalAssignDressSelect.appendChild(defaultOption1);
+
+            const defaultOption2 = document.createElement('option');
+            defaultOption2.value = '';
+            defaultOption2.textContent = 'Select Dress';
+            manualGroupDressSelect.appendChild(defaultOption2);
+
+            // Populate with dresses from state.dresses
+            if (state.dresses && Array.isArray(state.dresses)) {
+                state.dresses.forEach(dress => {
+                    const option1 = document.createElement('option');
+                    option1.value = dress.id;
+                    option1.textContent = dress.name;
+                    modalAssignDressSelect.appendChild(option1);
+
+                    const option2 = document.createElement('option');
+                    option2.value = dress.id;
+                    option2.textContent = dress.name;
+                    manualGroupDressSelect.appendChild(option2);
+                });
+            }
+        }
+    </script>
+    <!-- MANUAL GROUP MODAL -->
+    <div id="manualGroupModal"
+        class="hidden fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4 backdrop-blur-sm">
+        <div class="bg-white rounded-lg shadow-xl w-full max-w-md animate-in fade-in zoom-in duration-200">
+            <div class="p-5 border-b border-[#E2E8F0] bg-[#F9F9F7] flex justify-between items-center">
+                <h3 class="font-bold text-[#2C3E50] text-lg">Create Group Manually</h3>
+                <button onclick="closeManualGroupModal()" class="text-gray-400 hover:text-gray-600">×</button>
+            </div>
+            <div class="p-6 space-y-4">
+                <div>
+                    <label class="block text-xs font-bold text-[#7F8C8D] uppercase mb-1">Group Name</label>
+                    <input type="text" id="manualGroupName" placeholder="e.g. Batch A - Special"
+                        class="w-full border border-[#E2E8F0] rounded p-2 text-sm focus:border-blue-500 outline-none">
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-[#7F8C8D] uppercase mb-1">Target Dress</label>
+                    <select id="manualGroupDress" onchange="renderManualGroupMeasurements()"
+                        class="w-full border border-[#E2E8F0] rounded p-2 text-sm focus:border-blue-500 outline-none">
+                        <!-- Populated by JS -->
+                    </select>
+                </div>
+
+                <div class="grid grid-cols-3 gap-3">
+                    <div>
+                        <label class="block text-xs font-bold text-[#7F8C8D] uppercase mb-1">Filter Class</label>
+                        <input type="text" id="manualGroupClass" placeholder="e.g. 1"
+                            class="w-full border border-[#E2E8F0] rounded p-2 text-sm focus:border-blue-500 outline-none">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-[#7F8C8D] uppercase mb-1">Filter Section</label>
+                        <input type="text" id="manualGroupSection" placeholder="e.g. A"
+                            class="w-full border border-[#E2E8F0] rounded p-2 text-sm focus:border-blue-500 outline-none">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-[#7F8C8D] uppercase mb-1">Filter House</label>
+                        <input type="text" id="manualGroupHouse" placeholder="e.g. Red"
+                            class="w-full border border-[#E2E8F0] rounded p-2 text-sm focus:border-blue-500 outline-none">
+                    </div>
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-[#7F8C8D] uppercase mb-1">Filter Gender</label>
+                    <select id="manualGroupGender"
+                        class="w-full border border-[#E2E8F0] rounded p-2 text-sm focus:border-blue-500 outline-none">
+                        <option value="">Any</option>
+                        <option value="Male">Male</option>
+                        <option value="Female">Female</option>
+                    </select>
+                </div>
+
+                <!-- Measurement Filters (Dynamic) -->
+                <div id="manualGroupMeasurements" class="space-y-2 border-t border-gray-100 pt-2">
+                    <!-- Populated by JS -->
+                </div>
+
+                <div class="bg-orange-50 p-3 rounded border border-orange-100 text-xs text-orange-700">
+                    <span class="font-bold">Note:</span> This will create a group and extract students matching these
+                    criteria who are <b>Assigned</b> the selected dress.
+                </div>
+            </div>
+            <div class="p-4 bg-[#F9F9F7] border-t border-[#E2E8F0] flex justify-end gap-3">
+                <button onclick="closeManualGroupModal()" class="btn-outline px-4 py-2 rounded text-sm">Cancel</button>
+                <button onclick="createManualGroup()"
+                    class="btn-action px-4 py-2 rounded text-sm font-bold shadow-sm">Create Group</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function openManualGroupModal() {
+            updateDressDropdowns();
+            document.getElementById('manualGroupName').value = '';
+            document.getElementById('manualGroupClass').value = '';
+            document.getElementById('manualGroupSection').value = '';
+            // Check if House exists (safety)
+            const hse = document.getElementById('manualGroupHouse');
+            if (hse) hse.value = '';
+            document.getElementById('manualGroupGender').value = '';
+            document.getElementById('manualGroupMeasurements').innerHTML = ''; // Clear old inputs
+            document.getElementById('manualGroupModal').classList.remove('hidden');
+        }
+
+        function renderManualGroupMeasurements() {
+            const dressId = document.getElementById('manualGroupDress').value;
+            const container = document.getElementById('manualGroupMeasurements');
+            container.innerHTML = '';
+
+            if (!dressId) return;
+
+            const dress = state.dresses.find(d => d.id === dressId);
+            if (!dress || !dress.cols) return;
+
+            container.innerHTML = `<label class="block text-xs font-bold text-[#7F8C8D] uppercase mb-1">Measurement Strategy</label>` +
+                dress.cols.map(col => `
+                <div class="flex items-center gap-2 mb-1">
+                    <span class="w-10 text-[10px] font-bold text-gray-500 font-mono">${col}</span>
+                    <input type="number" id="mg_min_${col}" placeholder="Min" class="w-16 border border-[#E2E8F0] rounded px-2 py-1 text-xs outline-none focus:border-blue-500">
+                    <span class="text-gray-300 text-xs">-</span>
+                    <input type="number" id="mg_max_${col}" placeholder="Max" class="w-16 border border-[#E2E8F0] rounded px-2 py-1 text-xs outline-none focus:border-blue-500">
+                </div>
+            `).join('');
+        }
+
+        function closeManualGroupModal() {
+            document.getElementById('manualGroupModal').classList.add('hidden');
+        }
+
+        function createManualGroup() {
+            const name = document.getElementById('manualGroupName').value;
+            const dressId = document.getElementById('manualGroupDress').value;
+            const cls = document.getElementById('manualGroupClass').value.trim();
+            const sec = document.getElementById('manualGroupSection').value.trim();
+            const gen = document.getElementById('manualGroupGender').value;
+
+            if (!name || !dressId) return alert("Group Name and Dress are required.");
+
+            // Get Measurement Filters
+            const dress = state.dresses.find(d => d.id === dressId);
+            const rangeFilters = [];
+            if (dress && dress.cols) {
+                dress.cols.forEach(col => {
+                    const min = parseFloat(document.getElementById(`mg_min_${col}`).value);
+                    const max = parseFloat(document.getElementById(`mg_max_${col}`).value);
+
+                    // Ignore if both are 0 (User likely means "ignore")
+                    if (min === 0 && max === 0) return;
+
+                    if (!isNaN(min) || !isNaN(max)) {
+                        rangeFilters.push({ col, min, max });
+                    }
+                });
+            }
+
+            // detailed counters for debugging
+            let countFilters = 0;
+            let countAssigned = 0;
+            let countMeasurements = 0;
+
+            // Find Students
+            const candidates = state.students.filter(s => {
+                // 1. Check Filters (Class, Sec, Gender)
+                if (cls && String(s.Class).trim() !== cls) return false;
+                if (sec && String(s.Section).trim() !== sec) return false;
+                if (gen && s.Gender !== gen) return false;
+                countFilters++;
+
+                // 2. Check Dress Assignment
+                const assigns = state.assignments[s.id];
+                let hasDress = false;
+                if (assigns) {
+                    const arr = Array.isArray(assigns) ? assigns : [assigns];
+                    hasDress = arr.some(a => a.dressId === dressId);
+                }
+                if (!hasDress) return false;
+                countAssigned++;
+
+                // 3. Check Ranges
+                if (rangeFilters.length > 0) {
+                    const pass = rangeFilters.every(f => {
+                        const val = parseFloat(s[f.col]);
+                        if (isNaN(val)) return false;
+                        if (!isNaN(f.min) && val < f.min) return false;
+                        if (!isNaN(f.max) && val > f.max) return false;
+                        return true;
+                    });
+                    if (!pass) return false;
+                }
+                countMeasurements++;
+
+                return true;
+            });
+
+            if (candidates.length === 0) {
+                return alert(`No students found!\n\nDiagnostic:\n- Matches Class/Sec/Gender Filter: ${countFilters}\n- Has '${dress.name}' Assigned: ${countAssigned}\n- Matches Measurements: ${countMeasurements}\n\nPlease check if students are assigned this dress or if measurement ranges are too strict.`);
+            }
+
+            pushHistory();
+
+            state.groups.push({
+                id: `g_${Date.now()}`,
+                name: name,
+                dressId: dressId,
+                studentIds: candidates.map(s => s.id),
+                meta: { fabric: '', notes: 'Manually Created' }
+            });
+
+            saveSystem();
+            renderGroups();
+            closeManualGroupModal();
+            alert(`Group "${name}" created with ${candidates.length} students.`);
+        }
+    </script>
 </body>
 
 </html>
