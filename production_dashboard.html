@@ -2331,40 +2331,7 @@
 
         // Placeholder for updateDressDropdowns - assuming it exists elsewhere or will be defined
         // This function needs to populate the 'manualGroupDress' select element
-        function updateDressDropdowns() {
-            const modalAssignDressSelect = document.getElementById('modalAssignDress');
-            const manualGroupDressSelect = document.getElementById('manualGroupDress'); // New dropdown
 
-            // Clear existing options
-            modalAssignDressSelect.innerHTML = '';
-            manualGroupDressSelect.innerHTML = '';
-
-            // Add a default "Select Dress" option for both
-            const defaultOption1 = document.createElement('option');
-            defaultOption1.value = '';
-            defaultOption1.textContent = 'Select Dress';
-            modalAssignDressSelect.appendChild(defaultOption1);
-
-            const defaultOption2 = document.createElement('option');
-            defaultOption2.value = '';
-            defaultOption2.textContent = 'Select Dress';
-            manualGroupDressSelect.appendChild(defaultOption2);
-
-            // Populate with dresses from state.dresses
-            if (state.dresses && Array.isArray(state.dresses)) {
-                state.dresses.forEach(dress => {
-                    const option1 = document.createElement('option');
-                    option1.value = dress.id;
-                    option1.textContent = dress.name;
-                    modalAssignDressSelect.appendChild(option1);
-
-                    const option2 = document.createElement('option');
-                    option2.value = dress.id;
-                    option2.textContent = dress.name;
-                    manualGroupDressSelect.appendChild(option2);
-                });
-            }
-        }
     </script>
     <!-- MANUAL GROUP MODAL -->
     <div id="manualGroupModal"
