@@ -1246,19 +1246,28 @@
             const useSection = document.getElementById('cfgSplitSection').checked;
             const useGender = document.getElementById('cfgSplitGender').checked;
             const useHouse = document.getElementById('cfgSplitHouse').checked;
+            const useMeasure = document.getElementById('cfgSplitMeasure').checked;
 
             sourceStudents.forEach(s => {
                 let assigns = state.assignments[s.id];
                 if (!assigns) return;
-                // Normalize to array
                 if (!Array.isArray(assigns)) assigns = [assigns];
 
                 assigns.forEach(a => {
                     const dress = state.dresses.find(d => d.id == a.dressId);
                     if (!dress) return;
 
-                    // Build Dynamic Key (Base) - Used for Logical Grouping
+                    // Build Dynamic Key
                     let parts = [dress.name];
+
+                    // Measurement Grouping (Primary Key)
+                    // If enabled, we group by the FIRST measurement column (usually Size/Chest)
+                    if (useMeasure && dress.cols && dress.cols.length > 0) {
+                        const primCol = dress.cols[0];
+                        const val = s[primCol];
+                        if (val) parts.push(`Size ${val}`);
+                    }
+
                     if (useClass) parts.push(s.Class);
                     if (useClass && useSection) parts.push(s.Section);
                     if (useHouse && s.House) parts.push(s.House);
@@ -1601,7 +1610,23 @@
                             "Section": s.Section,
                             "Gender": s.Gender
                         };
-                        if (dress) dress.cols.forEach(c => row[c] = s[c]);
+
+                        // ADD QUANTITY
+                        let qty = 1;
+                        const assigns = state.assignments[sid];
+                        if (assigns) {
+                            const arr = Array.isArray(assigns) ? assigns : [assigns];
+                            const match = arr.find(a => a.dressId == g.dressId);
+                            if (match && match.quantity) qty = match.quantity;
+                        }
+                        row["Quantity"] = qty;
+
+                        // Add ALL Measurements (Full Data Dump)
+                        const allMeasures = ['U1', 'U2', 'U3', 'U4', 'U5', 'U6', 'U7', 'U8', 'L1', 'L2', 'L3', 'L4', 'L5', 'L6', 'L7', 'L8'];
+                        allMeasures.forEach(m => {
+                            row[m] = s[m] || '';
+                        });
+
                         masterData.push(row);
                     }
                 });
@@ -1620,6 +1645,16 @@
                         "Name": s.Name,
                         "Class": `${s.Class} ${s.Section}`,
                     };
+
+                    // ADD QUANTITY
+                    let qty = 1;
+                    const assigns = state.assignments[sid];
+                    if (assigns) {
+                        const arr = Array.isArray(assigns) ? assigns : [assigns];
+                        const match = arr.find(a => a.dressId == g.dressId);
+                        if (match && match.quantity) qty = match.quantity;
+                    }
+                    row["Qty"] = qty;
                     if (dress) dress.cols.forEach(c => row[c] = s[c]);
                     return row;
                 }).filter(r => r !== null);
